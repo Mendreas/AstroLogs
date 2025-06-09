@@ -92,6 +92,22 @@ const AstroObservationApp = () => {
   const [visiblePlanets, setVisiblePlanets] = useState<CelestialObject[]>([]);
   const [visibleStars, setVisibleStars] = useState<CelestialObject[]>([]);
   const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
+  const [visibleObjectsNow, setVisibleObjectsNow] = useState<any[]>([]);
+
+  // Exemplo de exoplanetas famosos
+  const exoplanets = [
+    { name: "51 Pegasi b", type: "exoplanet", ra: 344.366, dec: 20.768 },
+    { name: "HD 209458 b", type: "exoplanet", ra: 330.794, dec: 18.884 },
+    // ...adicione mais se quiser
+  ];
+
+  // Exemplo de deep sky objects (Messier)
+  const deepSkyObjects = [
+    { name: "M31 (Andromeda Galaxy)", type: "galaxy", ra: 10.6847, dec: 41.2692 },
+    { name: "M42 (Orion Nebula)", type: "nebula", ra: 83.8221, dec: -5.3911 },
+    { name: "M13 (Hercules Cluster)", type: "cluster", ra: 250.423, dec: 36.461 },
+    // ...adicione mais Messier/NGC
+  ];
 
   // Sample celestial objects with visibility data
   // const celestialObjects: CelestialObject[] = [ ... ];
@@ -421,6 +437,87 @@ const AstroObservationApp = () => {
 
   const allObjects: CelestialObject[] = [...visiblePlanets, ...visibleStars];
 
+  // Função para calcular objetos visíveis em um dado horário
+  function getVisibleObjectsAtHour(lat: number, lon: number, baseDate: Date, hour: number) {
+    const date = new Date(baseDate);
+    date.setHours(hour, 0, 0, 0);
+    const planets = getVisiblePlanets(lat, lon, date);
+    const stars = getVisibleBrightStars(lat, lon, date);
+
+    // Deep sky
+    const deepSky = deepSkyObjects.filter(obj =>
+      isObjectVisible(obj.ra, obj.dec, lat, lon, date)
+    );
+
+    // Exoplanetas
+    const exos = exoplanets.filter(obj =>
+      isObjectVisible(obj.ra, obj.dec, lat, lon, date)
+    );
+
+    return planets.length + stars.length + deepSky.length + exos.length;
+  }
+
+  function isObjectVisible(ra: number, dec: number, lat: number, lon: number, date: Date) {
+    const observer = new Observer(lat, lon, 0);
+    // RA em horas para graus: se necessário, divida por 15
+    const hor = Horizon(date, observer, ra, dec, "normal");
+    return hor.altitude > 0;
+  }
+
+  function getAllVisibleObjects(lat: number, lon: number, date: Date) {
+    // Planetas
+    const planets = getVisiblePlanets(lat, lon, date).map(obj => ({
+      ...obj,
+      displayType: "Planet"
+    }));
+
+    // Estrelas brilhantes
+    const stars = getVisibleBrightStars(lat, lon, date).map(obj => ({
+      ...obj,
+      displayType: "Star"
+    }));
+
+    // Deep sky
+    const deepSky = deepSkyObjects
+      .filter(obj => isObjectVisible(obj.ra, obj.dec, lat, lon, date))
+      .map(obj => ({
+        ...obj,
+        displayType: "Deep Sky"
+      }));
+
+    // Exoplanetas
+    const exos = exoplanets
+      .filter(obj => isObjectVisible(obj.ra, obj.dec, lat, lon, date))
+      .map(obj => ({
+        ...obj,
+        displayType: "Exoplanet"
+      }));
+
+    // Sol
+    const observer = new Observer(lat, lon, 0);
+    const sunEq = Equator(Body.Sun, date, observer, true, true);
+    const sunHor = Horizon(date, observer, sunEq.ra, sunEq.dec, "normal");
+    const sunVisible = sunHor.altitude > 0;
+    const sunObj = sunVisible
+      ? [{ name: "Sun", type: "sun", ra: sunEq.ra.toString(), dec: sunEq.dec.toString(), displayType: "Sun" }]
+      : [];
+
+    // Lua
+    const moonEq = Equator(Body.Moon, date, observer, true, true);
+    const moonHor = Horizon(date, observer, moonEq.ra, moonEq.dec, "normal");
+    const moonVisible = moonHor.altitude > 0;
+    const moonObj = moonVisible
+      ? [{ name: "Moon", type: "moon", ra: moonEq.ra.toString(), dec: moonEq.dec.toString(), displayType: "Moon" }]
+      : [];
+
+    // Junte tudo
+    return [...sunObj, ...moonObj, ...planets, ...stars, ...deepSky, ...exos];
+  }
+
+  useEffect(() => {
+    setVisibleObjectsNow(getAllVisibleObjects(userLocation.lat, userLocation.lng, currentTime));
+  }, [userLocation, currentTime]);
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -630,47 +727,60 @@ const AstroObservationApp = () => {
                 </button>
                 {showSkyChart && (
                   <div className="mt-4">
-                    <div className="font-bold mb-2">Visibility (next 6 hours):</div>
+                    <div className="font-bold mb-2">Visibilidade (próximas 6 horas):</div>
                     <div className="flex space-x-2">
-                      <div>
-                        <b>Currently Visible Planets:</b> {visiblePlanets.length > 0 ? visiblePlanets.map(p => p.name).join(', ') : 'None'}
-                      </div>
-                      <div>
-                        <b>Currently Visible Bright Stars:</b> {visibleStars.length > 0 ? visibleStars.map(p => p.name).join(', ') : 'None'}
-                      </div>
+                      {Array.from({ length: 6 }).map((_, i) => {
+                        const hour = (currentTime.getHours() + i) % 24;
+                        const count = getVisibleObjectsAtHour(userLocation.lat, userLocation.lng, currentTime, hour);
+                        return (
+                          <div key={i} className="flex flex-col items-center">
+                            <div className="text-xs text-gray-400">{hour}:00</div>
+                            <button
+                              className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-700 mt-1 hover:bg-green-600"
+                              onClick={() => {
+                                const newTime = new Date(currentTime);
+                                newTime.setHours(hour, 0, 0, 0);
+                                setCurrentTime(newTime);
+                              }}
+                            >
+                              {count}
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">Number of visible objects per hour (click to view)</div>
+                    <div className="text-xs text-gray-400 mt-1">Número de objetos visíveis por hora (planetas, estrelas, deep sky, exoplanetas)</div>
                   </div>
                 )}
               </div>
 
               {/* Currently Visible Objects */}
               <div className="bg-gray-800 rounded-lg p-6">
-                <h3 className="text-lg font-bold mb-4">🌠 Currently Visible Objects</h3>
+                <h3 className="text-lg font-bold mb-4">🌠 Objects</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {visiblePlanets.map(planet => (
-                    <div key={planet.name} className="bg-gray-700 p-4 rounded-lg">
-                      <h4 className="font-bold text-blue-400">{planet.name}</h4>
-                      <p className="text-sm text-gray-300">Type: {planet.type}</p>
-                      <div>
-                        <a href={simbadUrl(planet.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a> |{" "}
-                        <a href={wikipediaUrl(planet.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                      </div>
-                    </div>
-                  ))}
-                  {visibleStars.map(star => (
-                    <div key={star.name} className="bg-gray-700 p-4 rounded-lg">
-                      <h4 className="font-bold text-blue-400">{star.name}</h4>
-                      <p className="text-sm text-gray-300">Type: {star.type}</p>
-                      <div>
-                        <a href={simbadUrl(star.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a> |{" "}
-                        <a href={wikipediaUrl(star.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                      </div>
-                    </div>
-                  ))}
-                  {visiblePlanets.length === 0 && visibleStars.length === 0 && (
-                    <div className="text-gray-400">No planets or bright stars are currently visible.</div>
+                  {visibleObjectsNow.length === 0 && (
+                    <div className="text-gray-400">No objects are currently visible.</div>
                   )}
+                  {visibleObjectsNow.map(obj => (
+                    <div key={obj.name} className="bg-gray-700 p-4 rounded-lg">
+                      <h4 className="font-bold text-blue-400">{obj.name}</h4>
+                      <p className="text-sm text-gray-300">Type: {obj.displayType}</p>
+                      {obj.ra && obj.dec && (
+                        <p className="text-sm text-gray-300">RA: {obj.ra} | Dec: {obj.dec}</p>
+                      )}
+                      {/* Links: personalize conforme o tipo */}
+                      <div className="space-x-2 mt-2">
+                        <a href={wikipediaUrl(obj.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                        <a href={simbadUrl(obj.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                        {obj.type === "planet" && (
+                          <a href={jplSsdUrl(obj.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a>
+                        )}
+                        {obj.type === "exoplanet" && (
+                          <a href={nasaExoplanetUrl(obj.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
