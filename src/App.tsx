@@ -1271,6 +1271,29 @@ const AstroObservationApp = () => {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium mb-2">Image URL</label>
+                  <input
+                    type="text"
+                    value={formData.image}
+                    onChange={e => setFormData({ ...formData, image: e.target.value })}
+                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                    placeholder="Paste image link here (e.g., from iCloud, Imgur, etc.)"
+                  />
+                </div>
+
+                {formData.image && (
+                  <div className="mt-2">
+                    <img
+                      src={formData.image}
+                      alt="Observation"
+                      className="max-h-48 rounded border border-gray-600"
+                      style={{ maxWidth: "100%" }}
+                      onError={e => (e.currentTarget.style.display = "none")}
+                    />
+                  </div>
+                )}
+
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -1319,16 +1342,14 @@ const AstroObservationApp = () => {
         {/* Observation Detail Modal */}
         {showDetailModal && selectedObservation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">Observation Details</h3>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <X size={24} />
-                </button>
-              </div>
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"
+                aria-label="Fechar"
+              >
+                &times;
+              </button>
               <div className="space-y-2">
                 <div className="font-bold text-lg text-blue-400">{selectedObservation.name}</div>
                 {selectedObservation.image && (
