@@ -529,6 +529,32 @@ const AstroObservationApp = () => {
     localStorage.setItem("observations", JSON.stringify(observations));
   }, [observations]);
 
+  useEffect(() => {
+    // Remove script antigo se existir
+    const oldScript = document.getElementById("moonphase_widget_script");
+    if (oldScript) oldScript.remove();
+
+    // Limpa o container antes de adicionar o script
+    const widgetDiv = document.getElementById("moonphase_widget");
+    if (widgetDiv) widgetDiv.innerHTML = "";
+
+    // Cria o script
+    const script = document.createElement("script");
+    script.id = "moonphase_widget_script";
+    script.type = "text/javascript";
+    script.src = "http://moonphases.co.uk/js/widget.js";
+    script.async = true;
+
+    // Adiciona o script ao body
+    document.body.appendChild(script);
+
+    // Cleanup: remove script ao desmontar
+    return () => {
+      script.remove();
+      if (widgetDiv) widgetDiv.innerHTML = "";
+    };
+  }, []);
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -817,23 +843,14 @@ const AstroObservationApp = () => {
               {/* Moon Phase */}
               <div className="bg-gray-800 rounded-lg p-6">
                 <h3 className="text-lg font-bold mb-4 flex items-center">
-                  <Moon className="mr-2" size={20} />
+                  <span className="mr-2">🌙</span>
                   Moon Today
                 </h3>
-                <div className="flex items-center space-x-4">
-                  <div className="text-4xl">🌙</div>
-                  <div>
-                  {moonInfo ? (
-  <>
-    <p className="text-lg font-semibold">{moonPhaseName(Number(moonInfo.phase))}</p>
-    <p className="text-gray-400">
-      {moonInfo.illumination}% illuminated, Altitude: {moonInfo.altitude.toFixed(1)}°
-    </p>
-  </>
-) : (
-  <p>Loading...</p>
-)}
-                  </div>
+                <div className="flex justify-start">
+                  <div id="moonphase_widget"></div>
+                </div>
+                <div className="text-xs text-gray-400 mt-2">
+                  Fonte: <a href="https://moonphases.co.uk/" target="_blank" rel="noopener">moonphases.co.uk</a>
                 </div>
               </div>
             </div>
