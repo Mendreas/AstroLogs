@@ -529,32 +529,6 @@ const AstroObservationApp = () => {
     localStorage.setItem("observations", JSON.stringify(observations));
   }, [observations]);
 
-  useEffect(() => {
-    // Remove script antigo se existir
-    const oldScript = document.getElementById("moonphase_widget_script");
-    if (oldScript) oldScript.remove();
-
-    // Limpa o container antes de adicionar o script
-    const widgetDiv = document.getElementById("moonphase_widget");
-    if (widgetDiv) widgetDiv.innerHTML = "";
-
-    // Cria o script
-    const script = document.createElement("script");
-    script.id = "moonphase_widget_script";
-    script.type = "text/javascript";
-    script.src = "http://moonphases.co.uk/js/widget.js";
-    script.async = true;
-
-    // Adiciona o script ao body
-    document.body.appendChild(script);
-
-    // Cleanup: remove script ao desmontar
-    return () => {
-      script.remove();
-      if (widgetDiv) widgetDiv.innerHTML = "";
-    };
-  }, []);
-
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -847,10 +821,18 @@ const AstroObservationApp = () => {
                   Moon Today
                 </h3>
                 <div className="flex justify-start">
-                  <div id="moonphase_widget"></div>
+                  <iframe
+                    title="Moon Giant Phase"
+                    src="https://www.moongiant.com/phase/today/"
+                    width="300"
+                    height="300"
+                    frameBorder="0"
+                    scrolling="no"
+                    style={{ background: "transparent" }}
+                  ></iframe>
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
-                  Fonte: <a href="https://moonphases.co.uk/" target="_blank" rel="noopener">moonphases.co.uk</a>
+                  Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener">MoonGiant.com</a>
                 </div>
               </div>
             </div>
