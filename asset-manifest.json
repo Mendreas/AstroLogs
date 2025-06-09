@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/Mendreas/AstroLogs.git/static/css/main.cca19cca.css",
+    "main.js": "/Mendreas/AstroLogs.git/static/js/main.7ac4dbce.js",
+    "static/js/453.0dbf5f87.chunk.js": "/Mendreas/AstroLogs.git/static/js/453.0dbf5f87.chunk.js",
+    "index.html": "/Mendreas/AstroLogs.git/index.html",
+    "main.cca19cca.css.map": "/Mendreas/AstroLogs.git/static/css/main.cca19cca.css.map",
+    "main.7ac4dbce.js.map": "/Mendreas/AstroLogs.git/static/js/main.7ac4dbce.js.map",
+    "453.0dbf5f87.chunk.js.map": "/Mendreas/AstroLogs.git/static/js/453.0dbf5f87.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.cca19cca.css",
+    "static/js/main.7ac4dbce.js"
+  ]
+}
