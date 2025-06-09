@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Search, Plus, Star, Filter, Settings, Download, Upload, Save, X, Eye, Moon, Sun, Edit } from 'lucide-react';
+import { SearchRiseSet, Body, Observer, Equator, Horizon, DateTime, MoonPhase } from "astronomy-engine";
 
 // Types for observations and celestial objects
 interface Observation {
@@ -385,6 +386,38 @@ const AstroObservationApp = () => {
     // eslint-disable-next-line
   }, [editObservationId]);
 
+  const planetNames = [
+    "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"
+  ];
+
+  function getVisiblePlanets(lat: number, lon: number, date: Date) {
+    const observer = new Observer(lat, lon, 0);
+    return planetNames.filter(name => {
+      const body = Body[name as keyof typeof Body];
+      const eq = Equator(body, date, observer, true, true);
+      const hor = Horizon(date, observer, eq.ra, eq.dec, "normal");
+      return hor.altitude > 0; // Above horizon
+    });
+  }
+
+  async function fetchBortleClass(lat: number, lon: number): Promise<number> {
+    // Example using lightpollutionmap.info API
+    const url = `https://www.lightpollutionmap.info/QueryRaster/?ql=wa_2015&x=${lon}&y=${lat}&z=8`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const sqm = data.value; // Sky Quality Meter value
+    // Map SQM to Bortle class (approximate)
+    if (sqm >= 21.99) return 1;
+    if (sqm >= 21.89) return 2;
+    if (sqm >= 21.69) return 3;
+    if (sqm >= 21.25) return 4;
+    if (sqm >= 20.49) return 5;
+    if (sqm >= 19.50) return 6;
+    if (sqm >= 18.94) return 7;
+    if (sqm >= 18.38) return 8;
+    return 9;
+  }
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -602,13 +635,7 @@ const AstroObservationApp = () => {
                     <div className="flex space-x-2">
                       {Array.from({ length: 6 }).map((_, i) => {
                         const hour = (currentTime.getHours() + i) % 24;
-                        const visible = celestialObjects.filter(obj => {
-                          const [startHour, endHour] = obj.bestTime.split('-').map(time => parseInt(time.split(':')[0]));
-                          const isTimeGood = hour >= startHour || hour <= endHour ||
-                            (startHour > endHour && (hour >= startHour || hour <= endHour));
-                          return (obj.season === 'all' || obj.season === getCurrentSeason()) &&
-                            (obj.magnitude <= 6 || obj.type === 'planet') && isTimeGood;
-                        });
+                        const visible = getVisiblePlanets(userLocation.lat, userLocation.lng, currentTime);
                         return (
                           <div key={i} className="flex flex-col items-center">
                             <div className="text-xs text-gray-400">{hour}:00</div>
