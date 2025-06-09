@@ -52,13 +52,48 @@ const getBortleClass = async (lat: number, lng: number): Promise<string> => {
   return classes[idx];
 };
 
+const nominatimBase = 'https://nominatim.openstreetmap.org';
+
+function getSimbadId(name: string) {
+  return name.split('(')[0].trim();
+}
+
+function getWikipediaUrl(name: string) {
+  // Remove parentheses and trim
+  const clean = name.split('(')[0].trim().replace(/ /g, '_');
+  return `https://en.wikipedia.org/wiki/${encodeURIComponent(clean)}`;
+}
+
+function getMessierNasaUrl(name: string) {
+  // Only for Messier objects, e.g., "M13"
+  const match = name.match(/^M\\d+/i);
+  if (match) {
+    // NASA uses lowercase, e.g., m13
+    return `https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/${match[0].toLowerCase()}/`;
+  }
+  return null;
+}
+
+function getJplSolarSystemUrl(name: string) {
+  // For planets
+  const planets = [
+    'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'
+  ];
+  if (planets.includes(name.split(' ')[0])) {
+    return `https://ssd.jpl.nasa.gov/planets/${name.split(' ')[0].toLowerCase()}/`;
+  }
+  return null;
+}
+
 const AstroObservationApp = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [observations, setObservations] = useState<Observation[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editObservationId, setEditObservationId] = useState<number | null>(null);
   const [selectedObject, setSelectedObject] = useState('');
-  const [userLocation, setUserLocation] = useState({ lat: 38.7223, lng: -9.1393 }); // Lisbon default
+  const [userLocation, setUserLocation] = useState({ lat: 38.7223, lng: -9.1393 });
+  const [placeName, setPlaceName] = useState('Lisbon, Portugal');
+  const [placeInput, setPlaceInput] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [moonPhase, setMoonPhase] = useState({ phase: 'New Moon', illumination: 0 });
   const [visibleObjects, setVisibleObjects] = useState<CelestialObject[]>([]);
@@ -145,11 +180,21 @@ const AstroObservationApp = () => {
     };
     calculateVisibleObjects();
     // eslint-disable-next-line
-  }, [currentTime]);
+  }, [currentTime, userLocation]);
 
   // Fetch Bortle class for user location
   useEffect(() => {
     getBortleClass(userLocation.lat, userLocation.lng).then(setBortleClass);
+  }, [userLocation]);
+
+  // Reverse geocode when userLocation changes
+  useEffect(() => {
+    fetch(`${nominatimBase}/reverse?lat=${userLocation.lat}&lon=${userLocation.lng}&format=json`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.display_name) setPlaceName(data.display_name);
+      })
+      .catch(() => setPlaceName('Unknown location'));
   }, [userLocation]);
 
   const getCurrentSeason = () => {
@@ -175,6 +220,22 @@ const AstroObservationApp = () => {
         }
       );
     }
+  };
+
+  // Geocode place name
+  const handlePlaceSearch = () => {
+    if (!placeInput.trim()) return;
+    fetch(`${nominatimBase}/search?q=${encodeURIComponent(placeInput)}&format=json&limit=1`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          setUserLocation({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+          setPlaceName(data[0].display_name);
+        } else {
+          alert('Location not found.');
+        }
+      })
+      .catch(() => alert('Error fetching location.'));
   };
 
   // Add or edit observation
@@ -418,6 +479,46 @@ const AstroObservationApp = () => {
                         <option key={obj.name} value={obj.name}>{obj.name}</option>
                       ))}
                     </select>
+                    {selectedObject && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <a
+                          href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(getSimbadId(selectedObject))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 underline"
+                        >
+                          SIMBAD
+                        </a>
+                        <a
+                          href={getWikipediaUrl(selectedObject)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 underline"
+                        >
+                          Wikipedia
+                        </a>
+                        {getMessierNasaUrl(selectedObject) && (
+                          <a
+                            href={getMessierNasaUrl(selectedObject)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 underline"
+                          >
+                            NASA Messier
+                          </a>
+                        )}
+                        {getJplSolarSystemUrl(selectedObject) && (
+                          <a
+                            href={getJplSolarSystemUrl(selectedObject)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 underline"
+                          >
+                            JPL Solar System
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Date & Time:</label>
@@ -429,39 +530,57 @@ const AstroObservationApp = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Latitude:</label>
-                    <input
-                      type="number"
-                      value={userLocation.lat}
-                      onChange={(e) => setUserLocation({ ...userLocation, lat: parseFloat(e.target.value) })}
-                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                      step="0.0001"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Longitude:</label>
+                    <label className="block text-sm font-medium mb-2">Location:</label>
                     <div className="flex space-x-2">
                       <input
-                        type="number"
-                        value={userLocation.lng}
-                        onChange={(e) => setUserLocation({ ...userLocation, lng: parseFloat(e.target.value) })}
+                        type="text"
+                        value={placeInput}
+                        onChange={e => setPlaceInput(e.target.value)}
+                        placeholder={placeName}
                         className="flex-1 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                        step="0.0001"
                       />
                       <button
-                        onClick={getLocationData}
+                        onClick={handlePlaceSearch}
                         className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded"
+                        title="Search for place"
+                        type="button"
+                      >
+                        <Search size={16} />
+                      </button>
+                      <button
+                        onClick={getLocationData}
+                        className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded"
                         title="Get current location"
                         type="button"
                       >
                         <MapPin size={16} />
                       </button>
                     </div>
+                    <div className="text-xs text-gray-400 mt-1">{placeName}</div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Coordinates:</label>
+                    <div className="flex space-x-2">
+                      <input
+                        type="number"
+                        value={userLocation.lat}
+                        onChange={(e) => setUserLocation({ ...userLocation, lat: parseFloat(e.target.value) })}
+                        className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                        step="0.0001"
+                      />
+                      <input
+                        type="number"
+                        value={userLocation.lng}
+                        onChange={(e) => setUserLocation({ ...userLocation, lng: parseFloat(e.target.value) })}
+                        className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                        step="0.0001"
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="mt-4">
                   <div className="mb-2">
-                    <span className="font-bold">Bortle Class:</span> {bortleClass}
+                    <span className="font-bold">Bortle Class:</span> {bortleClass} <span className="text-xs text-gray-400">(demo, not real-time)</span>
                   </div>
                   <div className="mb-2">
                     <span className="font-bold">Sky Chart:</span>{' '}
@@ -513,7 +632,7 @@ const AstroObservationApp = () => {
                         );
                       })}
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">Number of visible objects per hour</div>
+                    <div className="text-xs text-gray-400 mt-1">Number of visible objects per hour (click to view)</div>
                   </div>
                 )}
               </div>
@@ -530,6 +649,44 @@ const AstroObservationApp = () => {
                       <p className="text-sm text-gray-300">Constellation: {obj.constellation}</p>
                       <p className="text-sm text-gray-300">Best Time: {obj.bestTime}</p>
                       <p className="text-sm text-gray-300">RA: {obj.ra} | Dec: {obj.dec}</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <a
+                          href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(getSimbadId(obj.name))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 underline"
+                        >
+                          SIMBAD
+                        </a>
+                        <a
+                          href={getWikipediaUrl(obj.name)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 underline"
+                        >
+                          Wikipedia
+                        </a>
+                        {getMessierNasaUrl(obj.name) && (
+                          <a
+                            href={getMessierNasaUrl(obj.name)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 underline"
+                          >
+                            NASA Messier
+                          </a>
+                        )}
+                        {getJplSolarSystemUrl(obj.name) && (
+                          <a
+                            href={getJplSolarSystemUrl(obj.name)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 underline"
+                          >
+                            JPL Solar System
+                          </a>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -24,12 +24,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-<<<<<<< HEAD
     "eject": "react-scripts eject",
-=======
-    "eject": "react-scripts eject"
->>>>>>> 124a6c23063332a1677eda476cf621b7707c5d69
-    "predeploy": "npm run build",
+	"predeploy": "npm run build",
     "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
@@ -56,3 +52,4 @@
     "tailwindcss": "^3.4.3"
   }
 }
+
