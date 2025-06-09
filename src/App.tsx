@@ -54,6 +54,31 @@ const getBortleClass = async (lat: number, lng: number): Promise<string> => {
 
 const nominatimBase = 'https://nominatim.openstreetmap.org';
 
+function getSimbadId(name: string) {
+  return name.split('(')[0].trim();
+}
+function getWikipediaUrl(name: string) {
+  const clean = name.split('(')[0].trim().replace(/ /g, '_');
+  return `https://en.wikipedia.org/wiki/${encodeURIComponent(clean)}`;
+}
+function getMessierNasaUrl(name: string) {
+  const match = name.match(/^M\d+/i);
+  if (match) {
+    return `https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/${match[0].toLowerCase()}/`;
+  }
+  return null;
+}
+function getJplSolarSystemUrl(name: string) {
+  const planets = [
+    'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'
+  ];
+  const firstWord = name.split(' ')[0];
+  if (planets.includes(firstWord)) {
+    return `https://ssd.jpl.nasa.gov/planets/${firstWord.toLowerCase()}/`;
+  }
+  return null;
+}
+
 const AstroObservationApp = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [observations, setObservations] = useState<Observation[]>([]);
@@ -618,14 +643,44 @@ const AstroObservationApp = () => {
                       <p className="text-sm text-gray-300">Constellation: {obj.constellation}</p>
                       <p className="text-sm text-gray-300">Best Time: {obj.bestTime}</p>
                       <p className="text-sm text-gray-300">RA: {obj.ra} | Dec: {obj.dec}</p>
-                      <a
-                        href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(obj.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block mt-2 text-blue-400 underline"
-                      >
-                        More Info on SIMBAD
-                      </a>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <a
+                          href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(getSimbadId(obj.name))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 underline"
+                        >
+                          SIMBAD
+                        </a>
+                        <a
+                          href={getWikipediaUrl(obj.name)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 underline"
+                        >
+                          Wikipedia
+                        </a>
+                        {getMessierNasaUrl(obj.name) && (
+                          <a
+                            href={getMessierNasaUrl(obj.name)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 underline"
+                          >
+                            NASA Messier
+                          </a>
+                        )}
+                        {getJplSolarSystemUrl(obj.name) && (
+                          <a
+                            href={getJplSolarSystemUrl(obj.name)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 underline"
+                          >
+                            JPL Solar System
+                          </a>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
