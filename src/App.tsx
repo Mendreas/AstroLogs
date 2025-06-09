@@ -518,6 +518,17 @@ const AstroObservationApp = () => {
     setVisibleObjectsNow(getAllVisibleObjects(userLocation.lat, userLocation.lng, currentTime));
   }, [userLocation, currentTime]);
 
+  // Carregar ao iniciar
+  useEffect(() => {
+    const saved = localStorage.getItem("observations");
+    if (saved) setObservations(JSON.parse(saved));
+  }, []);
+
+  // Salvar sempre que mudar
+  useEffect(() => {
+    localStorage.setItem("observations", JSON.stringify(observations));
+  }, [observations]);
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -663,13 +674,32 @@ const AstroObservationApp = () => {
                   <div>
                     <label className="block text-sm font-medium mb-2">Location:</label>
                     <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        value={placeInput}
-                        onChange={handlePlaceInput}
-                        placeholder={placeName}
-                        className="flex-1 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={placeInput}
+                          onChange={handlePlaceInput}
+                          placeholder={placeName}
+                          className="flex-1 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                        />
+                        {locationSuggestions.length > 0 && (
+                          <ul className="absolute left-0 right-0 bg-white text-black z-10">
+                            {locationSuggestions.map(suggestion => (
+                              <li
+                                key={suggestion.place_id}
+                                onClick={() => {
+                                  setUserLocation({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon) });
+                                  setPlaceInput(suggestion.display_name);
+                                  setLocationSuggestions([]);
+                                }}
+                                className="cursor-pointer hover:bg-gray-200 px-2 py-1"
+                              >
+                                {suggestion.display_name}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                       <button
                         onClick={getLocationData}
                         className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded"
@@ -1042,7 +1072,7 @@ const AstroObservationApp = () => {
               <h2 className="text-2xl font-bold">Settings & Configuration</h2>
               <div className="bg-gray-800 rounded-lg p-6">
                 <h3 className="text-lg font-bold mb-4">Data Management</h3>
-                <div className="space-y-4">
+                <div className="space-y-4 flex flex-col md:flex-row md:space-y-0 md:space-x-4">
                   <button
                     onClick={exportObservations}
                     className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2"
@@ -1307,25 +1337,6 @@ const AstroObservationApp = () => {
           <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
             ✅ Observation added successfully
           </div>
-        )}
-
-        {/* Location Suggestions */}
-        {locationSuggestions.length > 0 && (
-          <ul className="absolute bg-white text-black z-10">
-            {locationSuggestions.map(suggestion => (
-              <li
-                key={suggestion.place_id}
-                onClick={() => {
-                  setUserLocation({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon) });
-                  setPlaceInput(suggestion.display_name);
-                  setLocationSuggestions([]);
-                }}
-                className="cursor-pointer hover:bg-gray-200 px-2 py-1"
-              >
-                {suggestion.display_name}
-              </li>
-            ))}
-          </ul>
         )}
       </div>
     </div>
