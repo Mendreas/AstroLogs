@@ -2,6 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Search, Plus, Star, Filter, Settings, Download, Upload, Save, X, Eye, Moon, Sun, Edit } from 'lucide-react';
 import { Body, Observer, Equator, Horizon, MoonPhase } from "astronomy-engine";
 
+
+function moonPhaseName(phase: number) {
+  if (phase < 0.03 || phase > 0.97) return "New Moon";
+  if (phase < 0.22) return "Waxing Crescent";
+  if (phase < 0.28) return "First Quarter";
+  if (phase < 0.47) return "Waxing Gibbous";
+  if (phase < 0.53) return "Full Moon";
+  if (phase < 0.72) return "Waning Gibbous";
+  if (phase < 0.78) return "Last Quarter";
+  return "Waning Crescent";
+}
+
 // Types for observations and celestial objects
 interface Observation {
   id: number;
@@ -31,26 +43,26 @@ interface CelestialObject {
   bestTime: string;
 }
 
-const getBortleClass = async (lat: number, lng: number): Promise<string> => {
-  // Placeholder: In a real app, fetch from a Bortle API if available.
-  // For now, return a random class for demonstration.
-  // You can replace this with a real API call if you find a public endpoint.
-  const classes = [
-    'Class 1: Excellent dark-sky site',
-    'Class 2: Typical truly dark site',
-    'Class 3: Rural sky',
-    'Class 4: Rural/suburban transition',
-    'Class 5: Suburban sky',
-    'Class 6: Bright suburban sky',
-    'Class 7: Suburban/urban transition',
-    'Class 8: City sky',
-    'Class 9: Inner-city sky'
-  ];
-  // Simulate API delay
-  await new Promise(res => setTimeout(res, 300));
-  // Return a class based on lat/lng for demo
-  const idx = Math.abs(Math.floor((lat + lng) % 9));
-  return classes[idx];
+const fetchBortleClass = async (lat: number, lon: number): Promise<string> => {
+  try {
+    const url = `https://www.lightpollutionmap.info/QueryRaster/?ql=wa_2015&x=${lon}&y=${lat}&z=8`;
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("Bortle API response:", data); // <-- Add this line
+    const sqm = data.value;
+    if (typeof sqm !== "number") return "Unknown";
+    if (sqm >= 21.99) return "Class 1: Excellent dark-sky site";
+    if (sqm >= 21.89) return "Class 2: Typical truly dark site";
+    if (sqm >= 21.69) return "Class 3: Rural sky";
+    if (sqm >= 21.25) return "Class 4: Rural/suburban transition";
+    if (sqm >= 20.49) return "Class 5: Suburban sky";
+    if (sqm >= 19.50) return "Class 6: Bright suburban sky";
+    if (sqm >= 18.94) return "Class 7: Suburban/urban transition";
+    if (sqm >= 18.38) return "Class 8: City sky";
+    return "Class 9: Inner-city sky";
+  } catch {
+    return "Unknown";
+  }
 };
 
 const nominatimBase = 'https://nominatim.openstreetmap.org';
@@ -60,13 +72,12 @@ const AstroObservationApp = () => {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editObservationId, setEditObservationId] = useState<number | null>(null);
-  const [selectedObject, setSelectedObject] = useState('');
+  const [selectedObject, setSelectedObject] = useState<CelestialObject | null>(null);
   const [userLocation, setUserLocation] = useState({ lat: 38.7223, lng: -9.1393 });
   const [placeName, setPlaceName] = useState('Lisbon, Portugal');
   const [placeInput, setPlaceInput] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [moonPhase, setMoonPhase] = useState({ phase: 'New Moon', illumination: 0 });
-  const [visibleObjects, setVisibleObjects] = useState<CelestialObject[]>([]);
   const [filterType, setFilterType] = useState('all');
   const [showFavorites, setShowFavorites] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -77,17 +88,16 @@ const AstroObservationApp = () => {
   const [bortleClass, setBortleClass] = useState<string>('Loading...');
   const [showSkyChart, setShowSkyChart] = useState(false);
   const [redFilter, setRedFilter] = useState(false);
+  const [moonInfo, setMoonInfo] = useState<{altitude: number, phase: number, illumination: number} | null>(null);
+  const [visiblePlanets, setVisiblePlanets] = useState<CelestialObject[]>([]);
+  const [visibleStars, setVisibleStars] = useState<CelestialObject[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
 
   // Sample celestial objects with visibility data
-  const celestialObjects: CelestialObject[] = [
-    { name: 'M31 (Andromeda Galaxy)', type: 'galaxy', magnitude: 3.4, constellation: 'Andromeda', ra: '00h 42m', dec: "+41° 16'", season: 'autumn', bestTime: '22:00-02:00' },
-    { name: 'M42 (Orion Nebula)', type: 'nebula', magnitude: 4.0, constellation: 'Orion', ra: '05h 35m', dec: "-05° 23'", season: 'winter', bestTime: '20:00-24:00' },
-    { name: 'M13 (Hercules Cluster)', type: 'cluster', magnitude: 5.8, constellation: 'Hercules', ra: '16h 41m', dec: "+36° 28'", season: 'summer', bestTime: '21:00-01:00' },
-    { name: 'Saturn', type: 'planet', magnitude: 0.5, constellation: 'Aquarius', ra: '22h 30m', dec: "-10° 15'", season: 'all', bestTime: '20:00-04:00' },
-    { name: 'Jupiter', type: 'planet', magnitude: -2.5, constellation: 'Taurus', ra: '04h 15m', dec: "+20° 30'", season: 'all', bestTime: '19:00-03:00' },
-    { name: 'M57 (Ring Nebula)', type: 'nebula', magnitude: 8.8, constellation: 'Lyra', ra: '18h 53m', dec: "+33° 02'", season: 'summer', bestTime: '21:00-02:00' },
-    { name: 'Double Cluster', type: 'cluster', magnitude: 4.3, constellation: 'Perseus', ra: '02h 20m', dec: "+57° 08'", season: 'autumn', bestTime: '21:00-03:00' }
-  ];
+  // const celestialObjects: CelestialObject[] = [ ... ];
+  // const [visibleObjects, setVisibleObjects] = useState<CelestialObject[]>([]);
+  // const calculateVisibleObjects = () => { ... };
+  // useEffect(() => { calculateVisibleObjects(); }, [currentTime, userLocation]);
 
   // Form state
   const [formData, setFormData] = useState<Omit<Observation, 'id' | 'dateAdded'>>({
@@ -106,12 +116,12 @@ const AstroObservationApp = () => {
   });
 
   // Update current time every minute
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
+  // useEffect(() => {
+  //   const timer = setInterval(() => {
+  //     setCurrentTime(new Date());
+  //   }, 60000);
+  //   return () => clearInterval(timer);
+  // }, []);
 
   // Calculate moon phase (simplified)
   useEffect(() => {
@@ -134,27 +144,9 @@ const AstroObservationApp = () => {
     calculateMoonPhase();
   }, [currentTime]);
 
-  // Calculate visible objects based on time and location
-  useEffect(() => {
-    const calculateVisibleObjects = () => {
-      const currentSeason = getCurrentSeason();
-      const currentHour = currentTime.getHours();
-      const visible = celestialObjects.filter(obj => {
-        const [startHour, endHour] = obj.bestTime.split('-').map(time => parseInt(time.split(':')[0]));
-        const isTimeGood = currentHour >= startHour || currentHour <= endHour ||
-          (startHour > endHour && (currentHour >= startHour || currentHour <= endHour));
-        return (obj.season === 'all' || obj.season === currentSeason) &&
-          (obj.magnitude <= 6 || obj.type === 'planet') && isTimeGood;
-      });
-      setVisibleObjects(visible);
-    };
-    calculateVisibleObjects();
-    // eslint-disable-next-line
-  }, [currentTime, userLocation]);
-
   // Fetch Bortle class for user location
   useEffect(() => {
-    getBortleClass(userLocation.lat, userLocation.lng).then(setBortleClass);
+    fetchBortleClass(userLocation.lat, userLocation.lng).then(setBortleClass);
   }, [userLocation]);
 
   // Reverse geocode when userLocation changes
@@ -193,19 +185,15 @@ const AstroObservationApp = () => {
   };
 
   // Geocode place name
-  const handlePlaceSearch = () => {
-    if (!placeInput.trim()) return;
-    fetch(`${nominatimBase}/search?q=${encodeURIComponent(placeInput)}&format=json&limit=1`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.length > 0) {
-          setUserLocation({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
-          setPlaceName(data[0].display_name);
-        } else {
-          alert('Location not found.');
-        }
-      })
-      .catch(() => alert('Error fetching location.'));
+  const handlePlaceInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPlaceInput(e.target.value);
+    if (e.target.value.length > 2) {
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(e.target.value)}&format=json&limit=5`)
+        .then(res => res.json())
+        .then(data => setLocationSuggestions(data));
+    } else {
+      setLocationSuggestions([]);
+    }
   };
 
   // Add or edit observation
@@ -361,6 +349,78 @@ const AstroObservationApp = () => {
     // eslint-disable-next-line
   }, [editObservationId]);
 
+  const planetNames = [
+    "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"
+  ];
+
+  function getVisiblePlanets(lat: number, lon: number, date: Date): CelestialObject[] {
+    const observer = new Observer(lat, lon, 0);
+    return planetNames.map(name => {
+      const body = Body[name as keyof typeof Body];
+      const eq = Equator(body, date, observer, true, true);
+      const hor = Horizon(date, observer, eq.ra, eq.dec, "normal");
+      return {
+        name,
+        type: "planet",
+        magnitude: 0,
+        constellation: "",
+        ra: eq.ra.toString(),
+        dec: eq.dec.toString(),
+        season: "",
+        bestTime: ""
+      };
+    });
+  }
+
+  // Example bright stars (add more as needed)
+  const brightStars = [
+    { name: "Sirius", ra: 6.752, dec: -16.716 },
+    { name: "Vega", ra: 18.615, dec: 38.783 },
+    // ... more stars ...
+  ];
+
+  function getVisibleBrightStars(lat: number, lon: number, date: Date): CelestialObject[] {
+    const observer = new Observer(lat, lon, 0);
+    return brightStars.map(star => {
+      const ra = star.ra * 15;
+      const dec = star.dec;
+      const hor = Horizon(date, observer, ra, dec, "normal");
+      return {
+        name: star.name,
+        type: "star",
+        magnitude: 0,
+        constellation: "",
+        ra: ra.toString(),
+        dec: dec.toString(),
+        season: "",
+        bestTime: ""
+      };
+    });
+  }
+
+  useEffect(() => {
+    if (userLocation.lat && userLocation.lng) {
+      const now = new Date();
+      setVisiblePlanets(getVisiblePlanets(userLocation.lat, userLocation.lng, now));
+      setVisibleStars(getVisibleBrightStars(userLocation.lat, userLocation.lng, now));
+    }
+  }, [userLocation, currentTime]);
+
+  function simbadUrl(name: string) {
+    return `http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(name)}`;
+  }
+  function wikipediaUrl(name: string) {
+    return `https://en.wikipedia.org/wiki/${encodeURIComponent(name.replace(/ /g, "_"))}`;
+  }
+  function nasaExoplanetUrl(name: string) {
+    return `https://exoplanetarchive.ipac.caltech.edu/cgi-bin/DisplayOverview/nph-DisplayOverview?objname=${encodeURIComponent(name)}`;
+  }
+  function jplSsdUrl(name: string) {
+    return `https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=${encodeURIComponent(name)}`;
+  }
+
+  const allObjects: CelestialObject[] = [...visiblePlanets, ...visibleStars];
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -440,24 +500,58 @@ const AstroObservationApp = () => {
                   <div>
                     <label className="block text-sm font-medium mb-2">Celestial Object:</label>
                     <select
-                      value={selectedObject}
-                      onChange={(e) => setSelectedObject(e.target.value)}
+                      value={selectedObject ? selectedObject.name : ""}
+                      onChange={e => {
+                        const name = e.target.value;
+                        const found = allObjects.find(obj => obj.name === name) || null;
+                        setSelectedObject(found);
+                      }}
                       className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
                     >
                       <option value="">Select object...</option>
-                      {visibleObjects.map(obj => (
+                      {allObjects.map((obj: CelestialObject) => (
                         <option key={obj.name} value={obj.name}>{obj.name}</option>
                       ))}
                     </select>
                     {selectedObject && (
-                      <a
-                        href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(selectedObject)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block mt-2 text-blue-400 underline"
-                      >
-                        More Info on SIMBAD
-                      </a>
+                      <div className="space-x-2 mt-2">
+                        {/* Planets (Solar System) */}
+                        {selectedObject.type === "planet" && (
+                          <>
+                            <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                            <a href={jplSsdUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a>
+                            <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                          </>
+                        )}
+
+                        {/* Messier/NGC/Deep Sky Objects */}
+                        {(selectedObject.type === "galaxy" ||
+                          selectedObject.type === "nebula" ||
+                          selectedObject.type === "cluster" ||
+                          selectedObject.type === "deep_sky") && (
+                          <>
+                            <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                            <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                          </>
+                        )}
+
+                        {/* Exoplanets */}
+                        {selectedObject.type === "exoplanet" && (
+                          <>
+                            <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                            <a href={nasaExoplanetUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a>
+                            <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                          </>
+                        )}
+
+                        {/* Stars */}
+                        {selectedObject.type === "star" && (
+                          <>
+                            <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                            <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div>
@@ -475,18 +569,10 @@ const AstroObservationApp = () => {
                       <input
                         type="text"
                         value={placeInput}
-                        onChange={e => setPlaceInput(e.target.value)}
+                        onChange={handlePlaceInput}
                         placeholder={placeName}
                         className="flex-1 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
                       />
-                      <button
-                        onClick={handlePlaceSearch}
-                        className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded"
-                        title="Search for place"
-                        type="button"
-                      >
-                        <Search size={16} />
-                      </button>
                       <button
                         onClick={getLocationData}
                         className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded"
@@ -520,7 +606,7 @@ const AstroObservationApp = () => {
                 </div>
                 <div className="mt-4">
                   <div className="mb-2">
-                    <span className="font-bold">Bortle Class:</span> {bortleClass} <span className="text-xs text-gray-400">(demo, not real-time)</span>
+                  <span className="font-bold">Bortle Class:</span> {bortleClass}
                   </div>
                   <div className="mb-2">
                     <span className="font-bold">Sky Chart:</span>{' '}
@@ -546,31 +632,12 @@ const AstroObservationApp = () => {
                   <div className="mt-4">
                     <div className="font-bold mb-2">Visibility (next 6 hours):</div>
                     <div className="flex space-x-2">
-                      {Array.from({ length: 6 }).map((_, i) => {
-                        const hour = (currentTime.getHours() + i) % 24;
-                        const visible = celestialObjects.filter(obj => {
-                          const [startHour, endHour] = obj.bestTime.split('-').map(time => parseInt(time.split(':')[0]));
-                          const isTimeGood = hour >= startHour || hour <= endHour ||
-                            (startHour > endHour && (hour >= startHour || hour <= endHour));
-                          return (obj.season === 'all' || obj.season === getCurrentSeason()) &&
-                            (obj.magnitude <= 6 || obj.type === 'planet') && isTimeGood;
-                        });
-                        return (
-                          <div key={i} className="flex flex-col items-center">
-                            <div className="text-xs text-gray-400">{hour}:00</div>
-                            <button
-                              className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-700 mt-1 hover:bg-green-600"
-                              onClick={() => {
-                                const newTime = new Date(currentTime);
-                                newTime.setHours(hour, 0, 0, 0);
-                                setCurrentTime(newTime);
-                              }}
-                            >
-                              {visible.length}
-                            </button>
-                          </div>
-                        );
-                      })}
+                      <div>
+                        <b>Currently Visible Planets:</b> {visiblePlanets.length > 0 ? visiblePlanets.map(p => p.name).join(', ') : 'None'}
+                      </div>
+                      <div>
+                        <b>Currently Visible Bright Stars:</b> {visibleStars.length > 0 ? visibleStars.map(p => p.name).join(', ') : 'None'}
+                      </div>
                     </div>
                     <div className="text-xs text-gray-400 mt-1">Number of visible objects per hour (click to view)</div>
                   </div>
@@ -581,24 +648,29 @@ const AstroObservationApp = () => {
               <div className="bg-gray-800 rounded-lg p-6">
                 <h3 className="text-lg font-bold mb-4">🌠 Currently Visible Objects</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {visibleObjects.map(obj => (
-                    <div key={obj.name} className="bg-gray-700 p-4 rounded-lg">
-                      <h4 className="font-bold text-blue-400">{obj.name}</h4>
-                      <p className="text-sm text-gray-300">Type: {obj.type}</p>
-                      <p className="text-sm text-gray-300">Magnitude: {obj.magnitude}</p>
-                      <p className="text-sm text-gray-300">Constellation: {obj.constellation}</p>
-                      <p className="text-sm text-gray-300">Best Time: {obj.bestTime}</p>
-                      <p className="text-sm text-gray-300">RA: {obj.ra} | Dec: {obj.dec}</p>
-                      <a
-                        href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(obj.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block mt-2 text-blue-400 underline"
-                      >
-                        More Info on SIMBAD
-                      </a>
+                  {visiblePlanets.map(planet => (
+                    <div key={planet.name} className="bg-gray-700 p-4 rounded-lg">
+                      <h4 className="font-bold text-blue-400">{planet.name}</h4>
+                      <p className="text-sm text-gray-300">Type: {planet.type}</p>
+                      <div>
+                        <a href={simbadUrl(planet.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a> |{" "}
+                        <a href={wikipediaUrl(planet.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                      </div>
                     </div>
                   ))}
+                  {visibleStars.map(star => (
+                    <div key={star.name} className="bg-gray-700 p-4 rounded-lg">
+                      <h4 className="font-bold text-blue-400">{star.name}</h4>
+                      <p className="text-sm text-gray-300">Type: {star.type}</p>
+                      <div>
+                        <a href={simbadUrl(star.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a> |{" "}
+                        <a href={wikipediaUrl(star.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                      </div>
+                    </div>
+                  ))}
+                  {visiblePlanets.length === 0 && visibleStars.length === 0 && (
+                    <div className="text-gray-400">No planets or bright stars are currently visible.</div>
+                  )}
                 </div>
               </div>
 
@@ -611,8 +683,16 @@ const AstroObservationApp = () => {
                 <div className="flex items-center space-x-4">
                   <div className="text-4xl">🌙</div>
                   <div>
-                    <p className="text-lg font-semibold">{moonPhase.phase}</p>
-                    <p className="text-gray-400">{moonPhase.illumination}% illuminated</p>
+                  {moonInfo ? (
+  <>
+    <p className="text-lg font-semibold">{moonPhaseName(Number(moonInfo.phase))}</p>
+    <p className="text-gray-400">
+      {moonInfo.illumination}% illuminated, Altitude: {moonInfo.altitude.toFixed(1)}°
+    </p>
+  </>
+) : (
+  <p>Loading...</p>
+)}
                   </div>
                 </div>
               </div>
@@ -676,6 +756,18 @@ const AstroObservationApp = () => {
                     {obs.ra && <p className="text-sm text-gray-300 mb-1">RA: {obs.ra} | Dec: {obs.dec}</p>}
                     {obs.distance && <p className="text-sm text-gray-300 mb-1">Distance: {obs.distance} {obs.distanceUnit}</p>}
                     {obs.description && <p className="text-sm text-gray-400 mt-2">{obs.description}</p>}
+                    <div>
+                      <a href={simbadUrl(obs.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a> |{" "}
+                      <a href={wikipediaUrl(obs.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                      {/* For exoplanets: */}
+                      {obs.type === "exoplanet" && (
+                        <> | <a href={nasaExoplanetUrl(obs.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a></>
+                      )}
+                      {/* For solar system objects: */}
+                      {obs.type === "planet" && (
+                        <> | <a href={jplSsdUrl(obs.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a></>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1105,6 +1197,25 @@ const AstroObservationApp = () => {
           <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
             ✅ Observation added successfully
           </div>
+        )}
+
+        {/* Location Suggestions */}
+        {locationSuggestions.length > 0 && (
+          <ul className="absolute bg-white text-black z-10">
+            {locationSuggestions.map(suggestion => (
+              <li
+                key={suggestion.place_id}
+                onClick={() => {
+                  setUserLocation({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon) });
+                  setPlaceInput(suggestion.display_name);
+                  setLocationSuggestions([]);
+                }}
+                className="cursor-pointer hover:bg-gray-200 px-2 py-1"
+              >
+                {suggestion.display_name}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
