@@ -950,8 +950,7 @@ const AstroObservationApp = () => {
                   </ul>
                 </div>
               </div>
-              <div className="meteoblue-widgets flex flex-col md:flex-row md:space-x-4 mt-8">
-                {/* Widget 1 */}
+              <div className="meteoblue-widgets flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 mt-8">
                 <div>
                   <iframe
                     title="Previsão do tempo meteoblue"
@@ -965,7 +964,6 @@ const AstroObservationApp = () => {
                        target="_blank" rel="noopener">meteoblue</a>
                   </div>
                 </div>
-                {/* Widget 2 */}
                 <div>
                   <iframe
                     title="Observação meteoblue"
@@ -979,7 +977,6 @@ const AstroObservationApp = () => {
                        target="_blank" rel="noopener">meteoblue</a>
                   </div>
                 </div>
-                {/* Widget 3 */}
                 <div>
                   <iframe
                     title="Mapa meteoblue"
