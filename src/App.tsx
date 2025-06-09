@@ -950,6 +950,50 @@ const AstroObservationApp = () => {
                   </ul>
                 </div>
               </div>
+              <div className="meteoblue-widgets flex flex-col md:flex-row md:space-x-4 mt-8">
+                {/* Widget 1 */}
+                <div>
+                  <iframe
+                    title="Previsão do tempo meteoblue"
+                    src="https://www.meteoblue.com/pt/tempo/widget/three?geoloc=detect&nocurrent=0&noforecast=0&days=4&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&layout=image"
+                    frameBorder="0" scrolling="no" allowTransparency={true}
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
+                    style={{ width: 460, height: 590 }}
+                  ></iframe>
+                  <div>
+                    <a href="https://www.meteoblue.com/pt/tempo/semana/index?utm_source=three_widget&utm_medium=linkus&utm_content=three&utm_campaign=Weather%2BWidget"
+                       target="_blank" rel="noopener">meteoblue</a>
+                  </div>
+                </div>
+                {/* Widget 2 */}
+                <div>
+                  <iframe
+                    title="Observação meteoblue"
+                    src="https://www.meteoblue.com/pt/tempo/widget/seeing?geoloc=detect&noground=0"
+                    frameBorder="0" scrolling="no" allowTransparency={true}
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
+                    style={{ width: 520, height: 775 }}
+                  ></iframe>
+                  <div>
+                    <a href="https://www.meteoblue.com/pt/tempo/previsao/seeing?utm_source=seeing_widget&utm_medium=linkus&utm_content=seeing&utm_campaign=Weather%2BWidget"
+                       target="_blank" rel="noopener">meteoblue</a>
+                  </div>
+                </div>
+                {/* Widget 3 */}
+                <div>
+                  <iframe
+                    title="Mapa meteoblue"
+                    src="https://www.meteoblue.com/pt/tempo/mapas/widget?windAnimation=1&gust=1&satellite=1&cloudsAndPrecipitation=1&temperature=1&sunshine=1&extremeForecastIndex=1&geoloc=detect&tempunit=C&windunit=km%252Fh&lengthunit=metric&zoom=5&autowidth=manu"
+                    frameBorder="0" scrolling="no" allowTransparency={true}
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
+                    style={{ width: 500, height: 720 }}
+                  ></iframe>
+                  <div>
+                    <a href="https://www.meteoblue.com/pt/tempo/mapas/index?utm_source=map_widget&utm_medium=linkus&utm_content=map&utm_campaign=Weather%2BWidget"
+                       target="_blank" rel="noopener">meteoblue</a>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
