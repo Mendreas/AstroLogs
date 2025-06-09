@@ -449,14 +449,44 @@ const AstroObservationApp = () => {
                       ))}
                     </select>
                     {selectedObject && (
-                      <a
-                        href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(selectedObject)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block mt-2 text-blue-400 underline"
-                      >
-                        More Info on SIMBAD
-                      </a>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <a
+                          href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(getSimbadId(selectedObject))}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 underline"
+                        >
+                          SIMBAD
+                        </a>
+                        <a
+                          href={getWikipediaUrl(selectedObject)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 underline"
+                        >
+                          Wikipedia
+                        </a>
+                        {getMessierNasaUrl(selectedObject) && (
+                          <a
+                            href={getMessierNasaUrl(selectedObject)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 underline"
+                          >
+                            NASA Messier
+                          </a>
+                        )}
+                        {getJplSolarSystemUrl(selectedObject) && (
+                          <a
+                            href={getJplSolarSystemUrl(selectedObject)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 underline"
+                          >
+                            JPL Solar System
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div>
