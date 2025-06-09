@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Search, Plus, Star, Filter, Settings, Download, Upload, Save, X, Eye, Moon, Sun, Edit } from 'lucide-react';
-import { SearchRiseSet, Body, Observer, Equator, Horizon, DateTime, MoonPhase } from "astronomy-engine";
 
 // Types for observations and celestial objects
 interface Observation {
@@ -54,31 +53,6 @@ const getBortleClass = async (lat: number, lng: number): Promise<string> => {
 };
 
 const nominatimBase = 'https://nominatim.openstreetmap.org';
-
-function getSimbadId(name: string) {
-  return name.split('(')[0].trim();
-}
-function getWikipediaUrl(name: string) {
-  const clean = name.split('(')[0].trim().replace(/ /g, '_');
-  return `https://en.wikipedia.org/wiki/${encodeURIComponent(clean)}`;
-}
-function getMessierNasaUrl(name: string) {
-  const match = name.match(/^M\d+/i);
-  if (match) {
-    return `https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/${match[0].toLowerCase()}/`;
-  }
-  return null;
-}
-function getJplSolarSystemUrl(name: string) {
-  const planets = [
-    'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'
-  ];
-  const firstWord = name.split(' ')[0];
-  if (planets.includes(firstWord)) {
-    return `https://ssd.jpl.nasa.gov/planets/${firstWord.toLowerCase()}/`;
-  }
-  return null;
-}
 
 const AstroObservationApp = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -386,38 +360,6 @@ const AstroObservationApp = () => {
     // eslint-disable-next-line
   }, [editObservationId]);
 
-  const planetNames = [
-    "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"
-  ];
-
-  function getVisiblePlanets(lat: number, lon: number, date: Date) {
-    const observer = new Observer(lat, lon, 0);
-    return planetNames.filter(name => {
-      const body = Body[name as keyof typeof Body];
-      const eq = Equator(body, date, observer, true, true);
-      const hor = Horizon(date, observer, eq.ra, eq.dec, "normal");
-      return hor.altitude > 0; // Above horizon
-    });
-  }
-
-  async function fetchBortleClass(lat: number, lon: number): Promise<number> {
-    // Example using lightpollutionmap.info API
-    const url = `https://www.lightpollutionmap.info/QueryRaster/?ql=wa_2015&x=${lon}&y=${lat}&z=8`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const sqm = data.value; // Sky Quality Meter value
-    // Map SQM to Bortle class (approximate)
-    if (sqm >= 21.99) return 1;
-    if (sqm >= 21.89) return 2;
-    if (sqm >= 21.69) return 3;
-    if (sqm >= 21.25) return 4;
-    if (sqm >= 20.49) return 5;
-    if (sqm >= 19.50) return 6;
-    if (sqm >= 18.94) return 7;
-    if (sqm >= 18.38) return 8;
-    return 9;
-  }
-
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -507,44 +449,14 @@ const AstroObservationApp = () => {
                       ))}
                     </select>
                     {selectedObject && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <a
-                          href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(getSimbadId(selectedObject))}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 underline"
-                        >
-                          SIMBAD
-                        </a>
-                        <a
-                          href={getWikipediaUrl(selectedObject)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 underline"
-                        >
-                          Wikipedia
-                        </a>
-                        {getMessierNasaUrl(selectedObject) && (
-                          <a
-                            href={getMessierNasaUrl(selectedObject)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 underline"
-                          >
-                            NASA Messier
-                          </a>
-                        )}
-                        {getJplSolarSystemUrl(selectedObject) && (
-                          <a
-                            href={getJplSolarSystemUrl(selectedObject)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 underline"
-                          >
-                            JPL Solar System
-                          </a>
-                        )}
-                      </div>
+                      <a
+                        href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(selectedObject)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-2 text-blue-400 underline"
+                      >
+                        More Info on SIMBAD
+                      </a>
                     )}
                   </div>
                   <div>
@@ -635,7 +547,13 @@ const AstroObservationApp = () => {
                     <div className="flex space-x-2">
                       {Array.from({ length: 6 }).map((_, i) => {
                         const hour = (currentTime.getHours() + i) % 24;
-                        const visible = getVisiblePlanets(userLocation.lat, userLocation.lng, currentTime);
+                        const visible = celestialObjects.filter(obj => {
+                          const [startHour, endHour] = obj.bestTime.split('-').map(time => parseInt(time.split(':')[0]));
+                          const isTimeGood = hour >= startHour || hour <= endHour ||
+                            (startHour > endHour && (hour >= startHour || hour <= endHour));
+                          return (obj.season === 'all' || obj.season === getCurrentSeason()) &&
+                            (obj.magnitude <= 6 || obj.type === 'planet') && isTimeGood;
+                        });
                         return (
                           <div key={i} className="flex flex-col items-center">
                             <div className="text-xs text-gray-400">{hour}:00</div>
@@ -670,44 +588,14 @@ const AstroObservationApp = () => {
                       <p className="text-sm text-gray-300">Constellation: {obj.constellation}</p>
                       <p className="text-sm text-gray-300">Best Time: {obj.bestTime}</p>
                       <p className="text-sm text-gray-300">RA: {obj.ra} | Dec: {obj.dec}</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <a
-                          href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(getSimbadId(obj.name))}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 underline"
-                        >
-                          SIMBAD
-                        </a>
-                        <a
-                          href={getWikipediaUrl(obj.name)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 underline"
-                        >
-                          Wikipedia
-                        </a>
-                        {getMessierNasaUrl(obj.name) && (
-                          <a
-                            href={getMessierNasaUrl(obj.name)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 underline"
-                          >
-                            NASA Messier
-                          </a>
-                        )}
-                        {getJplSolarSystemUrl(obj.name) && (
-                          <a
-                            href={getJplSolarSystemUrl(obj.name)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 underline"
-                          >
-                            JPL Solar System
-                          </a>
-                        )}
-                      </div>
+                      <a
+                        href={`http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(obj.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-2 text-blue-400 underline"
+                      >
+                        More Info on SIMBAD
+                      </a>
                     </div>
                   ))}
                 </div>
