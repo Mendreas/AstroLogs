@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Search, Plus, Star, Filter, Settings, Download, Upload, Save, X, Eye, Moon, Sun, Edit } from 'lucide-react';
+import { Body, Observer, Equator, Horizon, MoonPhase } from "astronomy-engine";
 
 // Types for observations and celestial objects
 interface Observation {
