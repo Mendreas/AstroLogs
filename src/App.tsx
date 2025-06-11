@@ -813,7 +813,7 @@ const AstroObservationApp = () => {
               </div>
 
               {/* Moon Phase */}
-              <div className="bg-gray-800 rounded-lg p-6">
+              <div className="bg-gray-800 rounded-lg p-6" style={{ minHeight: '340px', overflow: 'visible' }}>
                 <h3 className="text-lg font-bold mb-4 flex items-center">
                   <span className="mr-2">🌙</span>
                   Moon Today
@@ -823,7 +823,7 @@ const AstroObservationApp = () => {
                     title="Moon Giant Phase"
                     src="https://www.moongiant.com/phase/today/"
                     width="300"
-                    height="300"
+                    height="450"
                     frameBorder="0"
                     scrolling="no"
                     style={{ background: "transparent" }}

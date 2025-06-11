@@ -1,0 +1,198 @@
+[
+  {
+    "id": "1",
+    "name": "Full Moon",
+    "date": "2025-06-12",
+    "description": "The full moon will be visible all night.",
+    "imageName": "full-moon.jpg"
+  },
+  {
+    "id": "2",
+    "name": "Summer Solstice",
+    "date": "2025-06-21",
+    "description": "The summer solstice is the longest day of the year in the Northern Hemisphere.",
+    "imageName": "earth.jpg"
+  },
+  {
+    "id": "3",
+    "name": "Capricornids Meteor Shower Peak",
+    "date": "2025-07-29",
+    "description": "The Capricornids meteor shower peaks tonight. Up to 5 meteors per hour.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "4",
+    "name": "Perseid Meteor Shower Peak",
+    "date": "2025-08-13",
+    "description": "The Perseid meteor shower, one of the best of the year, peaks tonight.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "5",
+    "name": "Full Moon",
+    "date": "2025-08-09",
+    "description": "The full moon will be visible all night.",
+    "imageName": "full-moon.jpg"
+  },
+  {
+    "id": "6",
+    "name": "Autumn Equinox",
+    "date": "2025-09-22",
+    "description": "The autumn equinox: day and night are nearly the same length.",
+    "imageName": "earth.jpg"
+  },
+  {
+    "id": "7",
+    "name": "Partial Lunar Eclipse",
+    "date": "2025-09-07",
+    "description": "A partial lunar eclipse is visible from much of Europe, Africa, and Asia.",
+    "imageName": "lunar-eclipse.jpg"
+  },
+  {
+    "id": "8",
+    "name": "Draconids Meteor Shower Peak",
+    "date": "2025-10-09",
+    "description": "The Draconids meteor shower peaks tonight. Best seen in the early evening.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "9",
+    "name": "Orionids Meteor Shower Peak",
+    "date": "2025-10-22",
+    "description": "The Orionids meteor shower peaks, with up to 20 meteors per hour.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "10",
+    "name": "Full Moon",
+    "date": "2025-10-07",
+    "description": "The full moon will be visible all night.",
+    "imageName": "full-moon.jpg"
+  },
+  {
+    "id": "11",
+    "name": "Taurids Meteor Shower Peak",
+    "date": "2025-11-12",
+    "description": "The Taurids meteor shower peaks. Sometimes produces bright fireballs.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "12",
+    "name": "Leonids Meteor Shower Peak",
+    "date": "2025-11-18",
+    "description": "The Leonids meteor shower peaks tonight.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "13",
+    "name": "Full Moon",
+    "date": "2025-11-05",
+    "description": "The full moon will be visible all night.",
+    "imageName": "full-moon.jpg"
+  },
+  {
+    "id": "14",
+    "name": "Geminids Meteor Shower Peak",
+    "date": "2025-12-14",
+    "description": "The Geminids, one of the best meteor showers, peaks tonight.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "15",
+    "name": "Winter Solstice",
+    "date": "2025-12-21",
+    "description": "The winter solstice is the shortest day of the year in the Northern Hemisphere.",
+    "imageName": "earth.jpg"
+  },
+  {
+    "id": "16",
+    "name": "Ursids Meteor Shower Peak",
+    "date": "2025-12-23",
+    "description": "The Ursids meteor shower peaks with up to 10 meteors per hour.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "17",
+    "name": "Full Moon",
+    "date": "2025-12-04",
+    "description": "The full moon will be visible all night.",
+    "imageName": "full-moon.jpg"
+  },
+  {
+    "id": "18",
+    "name": "Quadrantids Meteor Shower Peak",
+    "date": "2026-01-04",
+    "description": "The Quadrantids meteor shower peaks, with up to 40 meteors per hour.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "19",
+    "name": "Full Moon",
+    "date": "2026-01-03",
+    "description": "The full moon will be visible all night.",
+    "imageName": "full-moon.jpg"
+  },
+  {
+    "id": "20",
+    "name": "Vernal Equinox",
+    "date": "2026-03-20",
+    "description": "The vernal equinox marks the start of spring in the Northern Hemisphere.",
+    "imageName": "earth.jpg"
+  },
+  {
+    "id": "21",
+    "name": "Lyrids Meteor Shower Peak",
+    "date": "2026-04-22",
+    "description": "The Lyrids meteor shower peaks tonight.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "22",
+    "name": "Eta Aquarids Meteor Shower Peak",
+    "date": "2026-05-06",
+    "description": "The Eta Aquarids meteor shower peaks. Best viewed before dawn.",
+    "imageName": "meteor-shower.jpg"
+  },
+  {
+    "id": "23",
+    "name": "Total Lunar Eclipse",
+    "date": "2026-03-03",
+    "description": "A total lunar eclipse will be visible in much of Europe, Africa, Asia, and Australia.",
+    "imageName": "lunar-eclipse.jpg"
+  },
+  {
+    "id": "24",
+    "name": "Jupiter at Opposition",
+    "date": "2026-10-26",
+    "description": "Jupiter is opposite the Sun in the sky, best visible all night.",
+    "imageName": "jupiter.jpg"
+  },
+  {
+    "id": "25",
+    "name": "Saturn at Opposition",
+    "date": "2026-08-11",
+    "description": "Saturn is at opposition, shining bright in the night sky.",
+    "imageName": "saturn.jpg"
+  },
+  {
+    "id": "26",
+    "name": "Full Moon",
+    "date": "2026-08-28",
+    "description": "The full moon will be visible all night.",
+    "imageName": "full-moon.jpg"
+  },
+  {
+    "id": "27",
+    "name": "Partial Solar Eclipse",
+    "date": "2026-08-12",
+    "description": "A partial solar eclipse is visible in parts of the Northern Hemisphere.",
+    "imageName": "annular.jpg"
+  },
+  {
+    "id": "28",
+    "name": "Full Moon",
+    "date": "2026-12-22",
+    "description": "The full moon will be visible all night.",
+    "imageName": "full-moon.jpg"
+  }
+]
