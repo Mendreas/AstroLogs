@@ -825,7 +825,14 @@ const AstroObservationApp = () => {
                 </div>
                 <div className="mt-4">
                   <div className="mb-2">
-                  <span className="font-bold">Bortle Class:</span> {bortleClass}
+                    <a
+                      href={`https://lightpollutionmap.app/?lat=${userLocation.lat.toFixed(5)}&lng=${userLocation.lng.toFixed(5)}&zoom=6`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 underline font-bold"
+                    >
+                      View Light Pollution Map (Bortle Scale)
+                    </a>
                   </div>
                   <div className="mb-2">
                     <span className="font-bold">Sky Chart:</span>{' '}
