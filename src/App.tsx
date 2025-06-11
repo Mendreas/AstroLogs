@@ -1061,6 +1061,22 @@ const AstroObservationApp = () => {
                   </div>
                 </div>
               </div>
+              {/* Clear Outside widget */}
+              <div className="mt-8">
+                {userLocation && (
+                  <a
+                    href={`https://clearoutside.com/forecast/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      src={`https://clearoutside.com/forecast_image_large/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}/forecast.png`}
+                      alt="Clear Outside Forecast"
+                      style={{ width: '100%', maxWidth: 800 }}
+                    />
+                  </a>
+                )}
+              </div>
             </div>
           )}
 
