@@ -760,19 +760,19 @@ const AstroObservationApp = () => {
                       type="datetime-local"
                       value={currentTime.toISOString().slice(0, 16)}
                       onChange={(e) => setCurrentTime(new Date(e.target.value))}
-                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                      className="w-44 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Location:</label>
                     <div className="flex space-x-2">
-                      <div className="relative">
+                      <div className="relative flex-1">
                         <input
                           type="text"
                           value={placeInput}
                           onChange={handlePlaceInput}
                           placeholder={placeName}
-                          className="flex-1 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                          className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
                         />
                         {locationSuggestions.length > 0 && (
                           <ul className="absolute left-0 right-0 bg-white text-black z-10">
@@ -808,17 +808,17 @@ const AstroObservationApp = () => {
                     <div className="flex space-x-2">
                       <input
                         type="number"
-                        value={userLocation.lat}
+                        value={userLocation.lat.toFixed(2)}
                         onChange={(e) => setUserLocation({ ...userLocation, lat: parseFloat(e.target.value) })}
-                        className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                        step="0.0001"
+                        className="w-24 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                        step="0.01"
                       />
                       <input
                         type="number"
-                        value={userLocation.lng}
+                        value={userLocation.lng.toFixed(2)}
                         onChange={(e) => setUserLocation({ ...userLocation, lng: parseFloat(e.target.value) })}
-                        className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                        step="0.0001"
+                        className="w-24 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                        step="0.01"
                       />
                     </div>
                   </div>
