@@ -936,8 +936,8 @@ const AstroObservationApp = () => {
                   <h3 className="text-lg font-bold mb-4">Catalogs</h3>
                   <ul className="space-y-2">
                     <li><a href="https://hubblesite.org/contents/media/images?Type=2&page=1&filterUUID=2e1a4b24-07ab-4d85-aa47-5af4747b21e2" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Messier Catalog (NASA/Hubble)</a></li>
-                    <li><a href="https://www.ngcicproject.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">NGC Catalog</a></li>
-                    <li><a href="https://www.ngcicproject.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">IC Catalog</a></li>
+                    <li><a href="https://spider.seds.org/ngc/ngc.html" target="_blank" rel="noopener noreferrer">NGC Catalog</a></li>
+                    <li><a href="https://in-the-sky.org/" target="_blank" rel="noopener noreferrer">IC Catalog</a></li>
                   </ul>
                 </div>
                 <div className="bg-gray-800 rounded-lg p-6">
@@ -1024,7 +1024,7 @@ const AstroObservationApp = () => {
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-bold mb-4">Astronomical Societies</h3>
                   <ul className="space-y-2">
-                    <li><a href="https://www.aep.org.pt" className="text-blue-400 hover:text-blue-300">AEP (Portugal)</a></li>
+                    <li><a href="https://ptspace.pt/pt/home/" className="text-blue-400 hover:text-blue-300">AEP (Portugal)</a></li>
                     <li><a href="https://www.iau.org" className="text-blue-400 hover:text-blue-300">IAU</a></li>
                   </ul>
                 </div>
