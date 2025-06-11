@@ -838,15 +838,7 @@ const AstroObservationApp = () => {
                   Moon Today
                 </h3>
                 <div className="flex justify-start">
-                  <iframe
-                    title="Moon Giant Phase"
-                    src="https://www.moongiant.com/phase/today/"
-                    width="300"
-                    height="450"
-                    frameBorder="0"
-                    scrolling="no"
-                    style={{ background: "transparent" }}
-                  ></iframe>
+                  <img src={`${process.env.PUBLIC_URL}/images/full-moon.jpg`} alt="Full Moon" className="max-h-48" />
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
                   Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener">MoonGiant.com</a>
@@ -898,10 +890,10 @@ const AstroObservationApp = () => {
                     {obs.image && (
                       <div className="mb-3">
                         <img
-                          src={`/images/${obs.image}`}
+                          src={process.env.PUBLIC_URL + "/images/" + obs.image}
                           alt={obs.name}
                           className="w-full h-32 object-cover rounded-lg hover:opacity-80 cursor-pointer"
-                          onClick={e => { e.stopPropagation(); handleImageClick(`/images/${obs.image}`); }}
+                          onClick={e => { e.stopPropagation(); handleImageClick(process.env.PUBLIC_URL + "/images/" + obs.image); }}
                         />
                       </div>
                     )}
@@ -1338,7 +1330,7 @@ const AstroObservationApp = () => {
                 {formData.image && (
                   <div className="mt-2">
                     <img
-                      src={`/images/${formData.image}`}
+                      src={process.env.PUBLIC_URL + "/images/" + formData.image}
                       alt="Observation"
                       className="max-h-48 rounded border border-gray-600"
                       style={{ maxWidth: "100%" }}
@@ -1367,7 +1359,7 @@ const AstroObservationApp = () => {
                     className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
                   />
                   {formData.image && (
-                    <img src={`/images/${formData.image}`} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg" />
+                    <img src={process.env.PUBLIC_URL + "/images/" + formData.image} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg" />
                   )}
                 </div>
 
@@ -1408,10 +1400,10 @@ const AstroObservationApp = () => {
                 {selectedObservation.image && (
                   <div className="mb-3">
                     <img
-                      src={`/images/${selectedObservation.image}`}
+                      src={process.env.PUBLIC_URL + "/images/" + selectedObservation.image}
                       alt={selectedObservation.name}
                       className="w-full h-48 object-cover rounded-lg hover:opacity-80 cursor-pointer"
-                      onClick={() => handleImageClick(`/images/${selectedObservation.image}`)}
+                      onClick={() => handleImageClick(process.env.PUBLIC_URL + "/images/" + selectedObservation.image)}
                     />
                   </div>
                 )}
