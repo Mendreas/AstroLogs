@@ -937,20 +937,20 @@ const AstroObservationApp = () => {
                   <ul className="space-y-2">
                     <li><a href="https://hubblesite.org/contents/media/images?Type=2&page=1&filterUUID=2e1a4b24-07ab-4d85-aa47-5af4747b21e2" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Messier Catalog (NASA/Hubble)</a></li>
                     <li><a href="https://www.ngcicproject.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">NGC Catalog</a></li>
-                    <li><a href="https://www.ngcicproject.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">IC Catalog</a></li>
+                    <li><a href="https://in-the-sky.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">In the Sky</a></li>
                   </ul>
                 </div>
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-bold mb-4">Tools</h3>
                   <ul className="space-y-2">
-                    <li><a href="https://www.timeanddate.com/moon/phases/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Moon Phases</a></li>
+                  <li><a href="https://www.timeanddate.com/moon/phases/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Moon Phases</a></li>
                     <li><a href="https://stellarium-web.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Stellarium Web</a></li>
                     <li><a href="https://www.heavens-above.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Heavens Above</a></li>
                   </ul>
                 </div>
               </div>
-              <div className="meteoblue-widgets flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 mt-8">
-                <div className="w-full md:max-w-[480px]">
+              <div className="meteoblue-widgets flex flex-wrap gap-4 mt-8">
+                <div className="max-w-[480px] flex-shrink-0" style={{ width: 480 }}>
                   <iframe
                     title="Previsão do tempo meteoblue"
                     src="https://www.meteoblue.com/pt/tempo/widget/three?geoloc=detect&nocurrent=0&noforecast=0&days=4&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&layout=image"
@@ -964,7 +964,7 @@ const AstroObservationApp = () => {
                        target="_blank" rel="noopener">meteoblue</a>
                   </div>
                 </div>
-                <div className="w-full md:max-w-[540px]">
+                <div className="max-w-[540px] flex-shrink-0" style={{ width: 540 }}>
                   <iframe
                     title="Observação meteoblue"
                     src="https://www.meteoblue.com/pt/tempo/widget/seeing?geoloc=detect&noground=0"
@@ -978,7 +978,7 @@ const AstroObservationApp = () => {
                        target="_blank" rel="noopener">meteoblue</a>
                   </div>
                 </div>
-                <div className="w-full md:max-w-[520px]">
+                <div className="max-w-[520px] flex-shrink-0" style={{ width: 520 }}>
                   <iframe
                     title="Mapa meteoblue"
                     src="https://www.meteoblue.com/pt/tempo/mapas/widget?windAnimation=1&gust=1&satellite=1&cloudsAndPrecipitation=1&temperature=1&sunshine=1&extremeForecastIndex=1&geoloc=detect&tempunit=C&windunit=km%252Fh&lengthunit=metric&zoom=5&autowidth=manu"
@@ -1004,28 +1004,35 @@ const AstroObservationApp = () => {
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-bold mb-4">Space Agencies</h3>
                   <ul className="space-y-2">
-                    <li><a href="https://www.nasa.gov" className="text-blue-400 hover:text-blue-300">NASA</a></li>
-                    <li><a href="https://www.esa.int" className="text-blue-400 hover:text-blue-300">ESA</a></li>
-                    <li><a href="https://www.seti.org" className="text-blue-400 hover:text-blue-300">SETI</a></li>
-                    <li><a href="https://www.cnsa.gov.cn" className="text-blue-400 hover:text-blue-300">CNSA</a></li>
-                    <li><a href="https://www.aeb.gov.br" className="text-blue-400 hover:text-blue-300">AEB</a></li>
-                    <li><a href="https://www.asc-csa.gc.ca" className="text-blue-400 hover:text-blue-300">CSA</a></li>
-                    <li><a href="https://www.isro.gov.in" className="text-blue-400 hover:text-blue-300">ISRO</a></li>
+                    <li><a href="https://www.nasa.gov" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">NASA</a></li>
+                    <li><a href="https://www.esa.int" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">ESA</a></li>
+                    <li><a href="https://www.seti.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">SETI</a></li>
+                    <li><a href="https://www.cnsa.gov.cn" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">CNSA</a></li>
+                    <li><a href="https://www.gov.br/aeb/pt-br" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">AEB</a></li>
+                    <li><a href="https://ptspace.pt/pt/home/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">AEP (Portugal)</a></li>
+                    <li><a href="https://www.asc-csa.gc.ca" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">CSA</a></li>
+                    <li><a href="https://www.isro.gov.in" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">ISRO</a></li>
                   </ul>
                 </div>
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-bold mb-4">Commercial Space</h3>
                   <ul className="space-y-2">
-                    <li><a href="https://www.spacex.com" className="text-blue-400 hover:text-blue-300">SpaceX</a></li>
-                    <li><a href="https://www.arianespace.com" className="text-blue-400 hover:text-blue-300">Ariane</a></li>
-                    <li><a href="https://www.blueorigin.com" className="text-blue-400 hover:text-blue-300">Blue Origin</a></li>
+                    <li><a href="https://www.spacex.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">SpaceX</a></li>
+                    <li><a href="https://www.arianespace.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Ariane</a></li>
+                    <li><a href="https://www.blueorigin.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Blue Origin</a></li>
                   </ul>
                 </div>
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-bold mb-4">Astronomical Societies</h3>
                   <ul className="space-y-2">
-                    <li><a href="https://www.aep.org.pt" className="text-blue-400 hover:text-blue-300">AEP (Portugal)</a></li>
-                    <li><a href="https://www.iau.org" className="text-blue-400 hover:text-blue-300">IAU</a></li>
+                    <li><a href="https://a4e.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Astronomers for Planet Earth</a></li>
+                    <li><a href="https://astronomerswithoutborders.org/home" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Astronomers Without Borders</a></li>
+                    <li><a href="https://www.iau.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">International Astronomical Union</a></li>
+                    <li><a href="https://www.imo.net/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">International Meteor Organization</a></li>
+                    <li><a href="https://www.planetary.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">The Planetary Society</a></li>
+                    <li><a href="https://eas.unige.ch/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">European Astronomical Society</a></li>
+                    <li><a href="https://www.eaae-astronomy.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">European Association for Astronomy Education</a></li>
+                    <li><a href="https://en.wikipedia.org/wiki/List_of_astronomical_societies" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Wiki List of astronomical societies</a></li>
                   </ul>
                 </div>
               </div>
@@ -1036,7 +1043,7 @@ const AstroObservationApp = () => {
           {activeTab === 'calendar' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Astronomical Calendar</h2>
-              <div className="bg-gray-800 rounded-lg p-6">
+              <div className="bg-gray-800 rounded-lg p-6" style={{ maxWidth: 500, width: '100%' }}>
                 <div className="flex items-center justify-between mb-4">
                   <button
                     onClick={() => navigateCalendar('prev')}
