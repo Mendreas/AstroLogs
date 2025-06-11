@@ -937,7 +937,7 @@ const AstroObservationApp = () => {
                   <ul className="space-y-2">
                     <li><a href="https://hubblesite.org/contents/media/images?Type=2&page=1&filterUUID=2e1a4b24-07ab-4d85-aa47-5af4747b21e2" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Messier Catalog (NASA/Hubble)</a></li>
                     <li><a href="https://spider.seds.org/ngc/ngc.html" target="_blank" rel="noopener noreferrer">NGC Catalog</a></li>
-                    <li><a href="https://in-the-sky.org/" target="_blank" rel="noopener noreferrer">IC Catalog</a></li>
+                    <li><a href="https://in-the-sky.org/" target="_blank" rel="noopener noreferrer">In The Sky</a></li>
                   </ul>
                 </div>
                 <div className="bg-gray-800 rounded-lg p-6">
@@ -1008,24 +1008,31 @@ const AstroObservationApp = () => {
                     <li><a href="https://www.esa.int" className="text-blue-400 hover:text-blue-300">ESA</a></li>
                     <li><a href="https://www.seti.org" className="text-blue-400 hover:text-blue-300">SETI</a></li>
                     <li><a href="https://www.cnsa.gov.cn" className="text-blue-400 hover:text-blue-300">CNSA</a></li>
-                    <li><a href="https://www.aeb.gov.br" className="text-blue-400 hover:text-blue-300">AEB</a></li>
+                    <li><a href="https://www.gov.br/aeb/pt-br" target="_blank" rel="noopener noreferrer">AEB</a></li>
+                    <li><a href="https://ptspace.pt/pt/home/" target="_blank" rel="noopener noreferrer">AEP (Portugal)</a></li>
                     <li><a href="https://www.asc-csa.gc.ca" className="text-blue-400 hover:text-blue-300">CSA</a></li>
                     <li><a href="https://www.isro.gov.in" className="text-blue-400 hover:text-blue-300">ISRO</a></li>
                   </ul>
                 </div>
                 <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">Commercial Space</h3>
+                  <h3 className="text-lg font-bold mb-4">Astronomical Societies</h3>
                   <ul className="space-y-2">
-                    <li><a href="https://www.spacex.com" className="text-blue-400 hover:text-blue-300">SpaceX</a></li>
-                    <li><a href="https://www.arianespace.com" className="text-blue-400 hover:text-blue-300">Ariane</a></li>
-                    <li><a href="https://www.blueorigin.com" className="text-blue-400 hover:text-blue-300">Blue Origin</a></li>
+                    <li><a href="https://a4e.org/" target="_blank" rel="noopener noreferrer">Astronomers for Planet Earth</a></li>
+                    <li><a href="https://astronomerswithoutborders.org/home" target="_blank" rel="noopener noreferrer">Astronomers Without Borders</a></li>
+                    <li><a href="https://www.iau.org/" target="_blank" rel="noopener noreferrer">International Astronomical Union</a></li>
+                    <li><a href="https://www.imo.net/" target="_blank" rel="noopener noreferrer">International Meteor Organization</a></li>
+                    <li><a href="https://www.planetary.org/" target="_blank" rel="noopener noreferrer">The Planetary Society</a></li>
+                    <li><a href="https://eas.unige.ch/" target="_blank" rel="noopener noreferrer">European Astronomical Society</a></li>
+                    <li><a href="https://www.eaae-astronomy.org/" target="_blank" rel="noopener noreferrer">European Association for Astronomy Education</a></li>
+                    <li><a href="https://en.wikipedia.org/wiki/List_of_astronomical_societies" target="_blank" rel="noopener noreferrer">Wiki List of astronomical societies</a></li>
                   </ul>
                 </div>
                 <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">Astronomical Societies</h3>
+                  <h3 className="text-lg font-bold mb-4">Comercial Space</h3>
                   <ul className="space-y-2">
-                    <li><a href="https://ptspace.pt/pt/home/" className="text-blue-400 hover:text-blue-300">AEP (Portugal)</a></li>
-                    <li><a href="https://www.iau.org" className="text-blue-400 hover:text-blue-300">IAU</a></li>
+                    <li><a href="https://www.spacex.com/" target="_blank" rel="noopener noreferrer">SpaceX</a></li>
+                    <li><a href="https://www.arianespace.com/" target="_blank" rel="noopener noreferrer">Ariane</a></li>
+                    <li><a href="https://www.blueorigin.com/pt-BR" target="_blank" rel="noopener noreferrer">Blue Origin</a></li>
                   </ul>
                 </div>
               </div>
@@ -1105,6 +1112,16 @@ const AstroObservationApp = () => {
                     )}
                   </div>
                 )}
+              </div>
+              <div style={{ marginLeft: '32px' }}>
+                <h4>Calendário em Swift</h4>
+                <a
+                  href="https://github.com/jsinwell/Astronomy-Calendar"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Ver no GitHub
+                </a>
               </div>
             </div>
           )}
