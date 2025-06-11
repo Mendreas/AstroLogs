@@ -838,7 +838,11 @@ const AstroObservationApp = () => {
                   Moon Today
                 </h3>
                 <div className="flex justify-start">
-                  <img src={`${process.env.PUBLIC_URL}/images/full-moon.jpg`} alt="Full Moon" className="max-h-48" />
+                  <img
+                    src={process.env.PUBLIC_URL + "/images/full-moon.jpg"}
+                    alt="Full Moon"
+                    className="max-h-48"
+                  />
                 </div>
                 <div className="text-xs text-gray-400 mt-2">
                   Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener">MoonGiant.com</a>
@@ -1122,32 +1126,9 @@ const AstroObservationApp = () => {
                   </div>
                 )}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "flex-start",
-                  gap: "24px",
-                  width: "100%",
-                  boxSizing: "border-box"
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 320 }}>
-                  {/* Calendar here */}
-                </div>
-                <div
-                  style={{
-                    maxWidth: 500,
-                    width: "100%",
-                    maxHeight: 700,
-                    overflowY: "auto",
-                    background: "#181c23",
-                    borderRadius: 12,
-                    padding: 16,
-                    boxSizing: "border-box",
-                    flex: "0 1 500px"
-                  }}
-                >
+              <div className="flex flex-col lg:flex-row gap-8 w-full">
+                <div className="flex-1 min-w-[320px]">{/* Calendar */}</div>
+                <div className="w-full max-w-[500px] max-h-[700px] overflow-y-auto bg-[#181c23] rounded-xl p-4 flex-shrink-0">
                   <EventList events={filteredEvents} />
                 </div>
               </div>

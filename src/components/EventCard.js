@@ -21,7 +21,7 @@ function EventCard({ event }) {
       }}
     >
       <img
-        src={`/images/${event.imageName}.png`}
+        src={process.env.PUBLIC_URL + "/images/" + event.imageName}
         alt={event.name}
         style={{
           width: "100%",
