@@ -306,11 +306,39 @@ const AstroObservationApp = () => {
   };
 
   const handleImageClick = (img: string) => {
-    const win = window.open();
+    const win = window.open("", "_blank");
     if (win) {
-      win.document.write(`<img src="${img}" style="width:100vw;max-width:100%;height:auto;display:block;margin:auto;background:#000;" />`);
+      win.document.write(`
+        <html>
+          <head>
+            <title>Observation Image</title>
+            <style>
+              body { background: #000; margin: 0; display: flex; flex-direction: column; align-items: center; }
+              .close-btn {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #222;
+                color: #fff;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-size: 18px;
+                cursor: pointer;
+                z-index: 1000;
+                opacity: 0.8;
+              }
+              .close-btn:hover { opacity: 1; }
+              img { max-width: 100vw; max-height: 100vh; display: block; margin: auto; }
+            </style>
+          </head>
+          <body>
+            <button class="close-btn" onclick="window.close()">Close ✕</button>
+            <img src="${img}" alt="Observation" />
+          </body>
+        </html>
+      `);
       win.document.title = "Observation Image";
-      win.document.body.style.background = "#000";
     }
   };
 
