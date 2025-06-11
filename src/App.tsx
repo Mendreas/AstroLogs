@@ -540,8 +540,8 @@ const AstroObservationApp = () => {
       )}
       <div className="min-h-screen bg-gray-900 text-white">
         {/* Header */}
-        <header className="bg-gray-800 p-4 shadow-lg">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <header className="bg-gray-800 p-4 shadow-lg" style={{ paddingLeft: '10px', paddingRight: '10px' }}>
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="text-2xl">🔭</div>
               <h1 className="text-2xl font-bold">AstroLog</h1>
@@ -566,35 +566,33 @@ const AstroObservationApp = () => {
         </header>
 
         {/* Navigation */}
-        <nav className="bg-gray-800 border-t border-gray-700">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex space-x-8">
-              {[
-                { id: 'home', label: 'Home', icon: '🏠' },
-                { id: 'objects', label: 'Objects', icon: '🌟' },
-                { id: 'resources', label: 'Resources', icon: '📚' },
-                { id: 'links', label: 'Useful Links', icon: '🔗' },
-                { id: 'calendar', label: 'Calendar', icon: '📅' },
-                { id: 'settings', label: 'Settings', icon: '⚙️' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-400'
-                      : 'border-transparent text-gray-300 hover:text-gray-200'
-                  }`}
-                >
-                  <span className="mr-2">{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+        <nav className="bg-gray-800 border-t border-gray-700" style={{ paddingLeft: '10px', paddingRight: '10px' }}>
+          <div className="flex space-x-8">
+            {[
+              { id: 'home', label: 'Home', icon: '🏠' },
+              { id: 'objects', label: 'Objects', icon: '🌟' },
+              { id: 'resources', label: 'Resources', icon: '📚' },
+              { id: 'links', label: 'Useful Links', icon: '🔗' },
+              { id: 'calendar', label: 'Calendar', icon: '📅' },
+              { id: 'settings', label: 'Settings', icon: '⚙️' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-400'
+                    : 'border-transparent text-gray-300 hover:text-gray-200'
+                }`}
+              >
+                <span className="mr-2">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
           </div>
         </nav>
 
-        <main className="max-w-7xl mx-auto p-4">
+        <main className="w-full p-0 m-0" style={{ paddingLeft: '10px', paddingRight: '10px' }}>
           {/* Home Tab */}
           {activeTab === 'home' && (
             <div className="space-y-6">
