@@ -1264,7 +1264,7 @@ const AstroObservationApp = () => {
         {/* Add Observation Modal */}
         {showAddForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold">{editObservationId !== null ? 'Edit Observation' : 'Add Observation'}</h3>
                 <button
@@ -1460,7 +1460,7 @@ const AstroObservationApp = () => {
         {/* Observation Detail Modal */}
         {showDetailModal && selectedObservation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative" style={{ WebkitOverflowScrolling: 'touch' }}>
               <button
                 onClick={() => setShowDetailModal(false)}
                 className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"
