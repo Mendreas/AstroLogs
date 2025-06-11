@@ -499,7 +499,27 @@ const AstroObservationApp = () => {
     return `https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=${encodeURIComponent(name)}`;
   }
 
-  const allObjects: CelestialObject[] = [...visiblePlanets, ...visibleStars];
+  // Adicionar Messier/NGC (deep sky) ao dropdown e à lista de objetos visíveis
+  const visibleMessierObjects = deepSkyObjects
+    .filter(obj => isObjectVisible(obj.ra, obj.dec, userLocation.lat, userLocation.lng, currentTime))
+    .map(obj => ({
+      name: obj.name,
+      type: obj.type,
+      magnitude: 0,
+      constellation: '',
+      ra: obj.ra.toString(),
+      dec: obj.dec.toString(),
+      season: '',
+      bestTime: '',
+      displayType: 'Messier'
+    }));
+
+  // Atualizar allObjects para incluir Messier
+  const allObjects: CelestialObject[] = [
+    ...visiblePlanets,
+    ...visibleStars,
+    ...visibleMessierObjects
+  ];
 
   // Função para calcular objetos visíveis em um dado horário
   function getVisibleObjectsAtHour(lat: number, lon: number, baseDate: Date, hour: number) {
@@ -528,6 +548,12 @@ const AstroObservationApp = () => {
     return hor.altitude > 0;
   }
 
+  // Atualizar visibleObjectsNow para incluir Messier
+  useEffect(() => {
+    setVisibleObjectsNow(getAllVisibleObjects(userLocation.lat, userLocation.lng, currentTime));
+  }, [userLocation, currentTime]);
+
+  // Atualizar getAllVisibleObjects para incluir Messier
   function getAllVisibleObjects(lat: number, lon: number, date: Date) {
     // Planetas
     const planets = getVisiblePlanets(lat, lon, date).map(obj => ({
@@ -541,12 +567,12 @@ const AstroObservationApp = () => {
       displayType: "Star"
     }));
 
-    // Deep sky
-    const deepSky = deepSkyObjects
+    // Messier/NGC (deep sky)
+    const messier = deepSkyObjects
       .filter(obj => isObjectVisible(obj.ra, obj.dec, lat, lon, date))
       .map(obj => ({
         ...obj,
-        displayType: "Deep Sky"
+        displayType: "Messier"
       }));
 
     // Exoplanetas
@@ -575,12 +601,8 @@ const AstroObservationApp = () => {
       : [];
 
     // Junte tudo
-    return [...sunObj, ...moonObj, ...planets, ...stars, ...deepSky, ...exos];
+    return [...sunObj, ...moonObj, ...planets, ...stars, ...messier, ...exos];
   }
-
-  useEffect(() => {
-    setVisibleObjectsNow(getAllVisibleObjects(userLocation.lat, userLocation.lng, currentTime));
-  }, [userLocation, currentTime]);
 
   // Carregar ao iniciar
   useEffect(() => {
