@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Search, Plus, Star, Filter, Settings, Download, Upload, Save, X, Eye, Moon, Sun, Edit } from 'lucide-react';
 import { Body, Observer, Equator, Horizon, MoonPhase } from "astronomy-engine";
-
+import EventList from "./components/EventList";
+import eventsData from "./data/events.json";
 
 function moonPhaseName(phase: number) {
   if (phase < 0.03 || phase > 0.97) return "New Moon";
@@ -42,6 +43,14 @@ interface CelestialObject {
   season: string;
   bestTime: string;
 }
+
+type EventType = {
+  id: string;
+  name: string;
+  date: string;
+  description: string;
+  imageName: string;
+};
 
 const fetchBortleClass = async (lat: number, lon: number): Promise<string> => {
   try {
@@ -93,6 +102,8 @@ const AstroObservationApp = () => {
   const [visibleStars, setVisibleStars] = useState<CelestialObject[]>([]);
   const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
   const [visibleObjectsNow, setVisibleObjectsNow] = useState<any[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [events, setEvents] = useState<EventType[]>([]);
 
   // Exemplo de exoplanetas famosos
   const exoplanets = [
@@ -529,6 +540,14 @@ const AstroObservationApp = () => {
     localStorage.setItem("observations", JSON.stringify(observations));
   }, [observations]);
 
+  useEffect(() => {
+    setEvents(eventsData);
+  }, []);
+
+  const filteredEvents = events.filter(event =>
+    event.name.toLowerCase().includes(searchText.toLowerCase())
+  );
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -879,10 +898,10 @@ const AstroObservationApp = () => {
                     {obs.image && (
                       <div className="mb-3">
                         <img
-                          src={obs.image}
+                          src={`/images/${obs.image}`}
                           alt={obs.name}
                           className="w-full h-32 object-cover rounded-lg hover:opacity-80 cursor-pointer"
-                          onClick={e => { e.stopPropagation(); handleImageClick(obs.image); }}
+                          onClick={e => { e.stopPropagation(); handleImageClick(`/images/${obs.image}`); }}
                         />
                       </div>
                     )}
@@ -1111,6 +1130,35 @@ const AstroObservationApp = () => {
                   </div>
                 )}
               </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "flex-start",
+                  gap: "24px",
+                  width: "100%",
+                  boxSizing: "border-box"
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 320 }}>
+                  {/* Calendar here */}
+                </div>
+                <div
+                  style={{
+                    maxWidth: 500,
+                    width: "100%",
+                    maxHeight: 700,
+                    overflowY: "auto",
+                    background: "#181c23",
+                    borderRadius: 12,
+                    padding: 16,
+                    boxSizing: "border-box",
+                    flex: "0 1 500px"
+                  }}
+                >
+                  <EventList events={filteredEvents} />
+                </div>
+              </div>
             </div>
           )}
 
@@ -1290,7 +1338,7 @@ const AstroObservationApp = () => {
                 {formData.image && (
                   <div className="mt-2">
                     <img
-                      src={formData.image}
+                      src={`/images/${formData.image}`}
                       alt="Observation"
                       className="max-h-48 rounded border border-gray-600"
                       style={{ maxWidth: "100%" }}
@@ -1319,7 +1367,7 @@ const AstroObservationApp = () => {
                     className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
                   />
                   {formData.image && (
-                    <img src={formData.image} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg" />
+                    <img src={`/images/${formData.image}`} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg" />
                   )}
                 </div>
 
@@ -1360,10 +1408,10 @@ const AstroObservationApp = () => {
                 {selectedObservation.image && (
                   <div className="mb-3">
                     <img
-                      src={selectedObservation.image}
+                      src={`/images/${selectedObservation.image}`}
                       alt={selectedObservation.name}
                       className="w-full h-48 object-cover rounded-lg hover:opacity-80 cursor-pointer"
-                      onClick={() => handleImageClick(selectedObservation.image)}
+                      onClick={() => handleImageClick(`/images/${selectedObservation.image}`)}
                     />
                   </div>
                 )}
