@@ -1056,78 +1056,77 @@ const AstroObservationApp = () => {
           {activeTab === 'calendar' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Astronomical Calendar</h2>
-              <div className="bg-gray-800 rounded-lg p-6" style={{ maxWidth: 500, width: '100%' }}>
-                <div className="flex items-center justify-between mb-4">
-                  <button
-                    onClick={() => navigateCalendar('prev')}
-                    className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
-                  >
-                    ←
-                  </button>
-                  <h3 className="text-xl font-bold">
-                    {calendarDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                  </h3>
-                  <button
-                    onClick={() => navigateCalendar('next')}
-                    className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
-                  >
-                    →
-                  </button>
-                </div>
-                <div className="grid grid-cols-7 gap-2">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                    <div key={day} className="text-center font-bold p-2 text-gray-400">
-                      {day}
-                    </div>
-                  ))}
-                  {getDaysInMonth(calendarDate).map((day, index) => {
-                    const isToday = day === new Date().getDate() &&
-                      calendarDate.getMonth() === new Date().getMonth() &&
-                      calendarDate.getFullYear() === new Date().getFullYear();
-                    const hasObs = day && getObservationsForDay(calendarDate, day).length > 0;
-                    return (
-                      <div
-                        key={index}
-                        className={`text-center p-2 rounded cursor-pointer min-h-[40px] flex items-center justify-center ${
-                          day ? 'hover:bg-gray-700' : ''
-                        } ${
-                          isToday ? 'bg-blue-600 text-white' : ''
-                        } ${
-                          hasObs ? 'ring-2 ring-green-400' : ''
-                        } ${
-                          calendarSelectedDay === day ? 'bg-green-700 text-white' : ''
-                        }`}
-                        onClick={() => day && setCalendarSelectedDay(day)}
-                      >
-                        {day || ''}
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Show observations for selected day */}
-                {calendarSelectedDay && (
-                  <div className="mt-6">
-                    <h4 className="font-bold mb-2">Observations for {calendarDate.getFullYear()}-{(calendarDate.getMonth() + 1).toString().padStart(2, '0')}-{calendarSelectedDay.toString().padStart(2, '0')}</h4>
-                    {getObservationsForDay(calendarDate, calendarSelectedDay).length === 0 ? (
-                      <div className="text-gray-400">No observations for this day.</div>
-                    ) : (
-                      <ul className="space-y-2">
-                        {getObservationsForDay(calendarDate, calendarSelectedDay).map(obs => (
-                          <li
-                            key={obs.id}
-                            className="bg-gray-700 p-3 rounded cursor-pointer hover:ring-2 hover:ring-blue-400"
-                            onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}
-                          >
-                            <span className="font-bold text-blue-300">{obs.name}</span> ({obs.type})
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-              </div>
               <div className="flex flex-col lg:flex-row gap-8 w-full">
-                <div className="flex-1 min-w-[320px]">{/* Calendar */}</div>
+                <div className="bg-gray-800 rounded-lg p-6 flex-1 min-w-[320px]" style={{ maxWidth: 500, width: '100%' }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <button
+                      onClick={() => navigateCalendar('prev')}
+                      className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
+                    >
+                      ←
+                    </button>
+                    <h3 className="text-xl font-bold">
+                      {calendarDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                    </h3>
+                    <button
+                      onClick={() => navigateCalendar('next')}
+                      className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
+                    >
+                      →
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                      <div key={day} className="text-center font-bold p-2 text-gray-400">
+                        {day}
+                      </div>
+                    ))}
+                    {getDaysInMonth(calendarDate).map((day, index) => {
+                      const isToday = day === new Date().getDate() &&
+                        calendarDate.getMonth() === new Date().getMonth() &&
+                        calendarDate.getFullYear() === new Date().getFullYear();
+                      const hasObs = day && getObservationsForDay(calendarDate, day).length > 0;
+                      return (
+                        <div
+                          key={index}
+                          className={`text-center p-2 rounded cursor-pointer min-h-[40px] flex items-center justify-center ${
+                            day ? 'hover:bg-gray-700' : ''
+                          } ${
+                            isToday ? 'bg-blue-600 text-white' : ''
+                          } ${
+                            hasObs ? 'ring-2 ring-green-400' : ''
+                          } ${
+                            calendarSelectedDay === day ? 'bg-green-700 text-white' : ''
+                          }`}
+                          onClick={() => day && setCalendarSelectedDay(day)}
+                        >
+                          {day || ''}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Show observations for selected day */}
+                  {calendarSelectedDay && (
+                    <div className="mt-6">
+                      <h4 className="font-bold mb-2">Observations for {calendarDate.getFullYear()}-{(calendarDate.getMonth() + 1).toString().padStart(2, '0')}-{calendarSelectedDay.toString().padStart(2, '0')}</h4>
+                      {getObservationsForDay(calendarDate, calendarSelectedDay).length === 0 ? (
+                        <div className="text-gray-400">No observations for this day.</div>
+                      ) : (
+                        <ul className="space-y-2">
+                          {getObservationsForDay(calendarDate, calendarSelectedDay).map(obs => (
+                            <li
+                              key={obs.id}
+                              className="bg-gray-700 p-3 rounded cursor-pointer hover:ring-2 hover:ring-blue-400"
+                              onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}
+                            >
+                              <span className="font-bold text-blue-300">{obs.name}</span> ({obs.type})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="w-full max-w-[500px] max-h-[700px] overflow-y-auto bg-[#181c23] rounded-xl p-4 flex-shrink-0">
                   <EventList events={filteredEvents} />
                 </div>
