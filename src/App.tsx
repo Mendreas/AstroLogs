@@ -76,6 +76,26 @@ const fetchBortleClass = async (lat: number, lon: number): Promise<string> => {
 
 const nominatimBase = 'https://nominatim.openstreetmap.org';
 
+const uploadToImgur = async (file: File) => {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const response = await fetch("https://api.imgur.com/3/image", {
+    method: "POST",
+    headers: {
+      Authorization: "Client-ID 1279890457abbbf"
+    },
+    body: formData
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    return data.data.link; // This is the public URL
+  } else {
+    throw new Error("Imgur upload failed");
+  }
+};
+
 const AstroObservationApp = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [observations, setObservations] = useState<Observation[]>([]);
@@ -269,14 +289,19 @@ const AstroObservationApp = () => {
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setFormData({ ...formData, image: (event.target?.result as string) || '' });
-      };
-      reader.readAsDataURL(file);
+      try {
+        const imgurUrl = await uploadToImgur(file);
+        setFormData({ ...formData, image: imgurUrl });
+      } catch (err) {
+        if (err instanceof Error) {
+          alert("Image upload failed: " + err.message);
+        } else {
+          alert("Image upload failed.");
+        }
+      }
     }
   };
 
@@ -896,10 +921,10 @@ const AstroObservationApp = () => {
                     {obs.image && (
                       <div className="mb-3">
                         <img
-                          src={process.env.PUBLIC_URL + "/images/" + obs.image}
+                          src={obs.image}
                           alt={obs.name}
                           className="w-full h-32 object-cover rounded-lg hover:opacity-80 cursor-pointer"
-                          onClick={e => { e.stopPropagation(); handleImageClick(process.env.PUBLIC_URL + "/images/" + obs.image); }}
+                          onClick={() => handleImageClick(obs.image)}
                         />
                       </div>
                     )}
@@ -1312,7 +1337,7 @@ const AstroObservationApp = () => {
                 {formData.image && (
                   <div className="mt-2">
                     <img
-                      src={process.env.PUBLIC_URL + "/images/" + formData.image}
+                      src={formData.image}
                       alt="Observation"
                       className="max-h-48 rounded border border-gray-600"
                       style={{ maxWidth: "100%" }}
@@ -1341,7 +1366,7 @@ const AstroObservationApp = () => {
                     className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
                   />
                   {formData.image && (
-                    <img src={process.env.PUBLIC_URL + "/images/" + formData.image} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg" />
+                    <img src={formData.image} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg" />
                   )}
                 </div>
 
@@ -1382,10 +1407,10 @@ const AstroObservationApp = () => {
                 {selectedObservation.image && (
                   <div className="mb-3">
                     <img
-                      src={process.env.PUBLIC_URL + "/images/" + selectedObservation.image}
+                      src={selectedObservation.image}
                       alt={selectedObservation.name}
                       className="w-full h-48 object-cover rounded-lg hover:opacity-80 cursor-pointer"
-                      onClick={() => handleImageClick(process.env.PUBLIC_URL + "/images/" + selectedObservation.image)}
+                      onClick={() => handleImageClick(selectedObservation.image)}
                     />
                   </div>
                 )}
