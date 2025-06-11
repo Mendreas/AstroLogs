@@ -10,6 +10,8 @@ function formatEventDate(dateStr) {
 }
 
 function EventCard({ event }) {
+  const imagePath = `${process.env.PUBLIC_URL}/images/${event.imageName}`;
+  
   return (
     <div
       style={{
@@ -21,12 +23,16 @@ function EventCard({ event }) {
       }}
     >
       <img
-        src={process.env.PUBLIC_URL + "/images/" + event.imageName}
+        src={imagePath}
         alt={event.name}
         style={{
           width: "100%",
           height: 150,
           objectFit: "cover",
+        }}
+        onError={(e) => {
+          console.error(`Failed to load image: ${imagePath}`);
+          e.target.style.display = 'none';
         }}
       />
       <div style={{ padding: 16 }}>

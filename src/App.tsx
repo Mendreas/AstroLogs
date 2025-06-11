@@ -3,6 +3,8 @@ import { Calendar, MapPin, Search, Plus, Star, Filter, Settings, Download, Uploa
 import { Body, Observer, Equator, Horizon, MoonPhase } from "astronomy-engine";
 import EventList from "./components/EventList";
 import eventsData from "./data/events.json";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 function moonPhaseName(phase: number) {
   if (phase < 0.03 || phase > 0.97) return "New Moon";
@@ -756,10 +758,11 @@ const AstroObservationApp = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Date & Time:</label>
-                    <input
-                      type="datetime-local"
-                      value={currentTime.toISOString().slice(0, 16)}
-                      onChange={(e) => setCurrentTime(new Date(e.target.value))}
+                    <DatePicker
+                      selected={currentTime}
+                      onChange={(date: Date | null) => date && setCurrentTime(date)}
+                      showTimeSelect
+                      dateFormat="Pp"
                       className="w-44 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
                     />
                   </div>
@@ -837,7 +840,7 @@ const AstroObservationApp = () => {
                   <div className="mb-2">
                     <span className="font-bold">Sky Chart:</span>{' '}
                     <a
-                      href={`https://stellarium-web.org/skyscape.html?lat=${userLocation.lat}&lon=${userLocation.lng}`}
+                      href={`https://stellarium-web.org/?lat=${userLocation.lat}&lon=${userLocation.lng}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-400 underline"
