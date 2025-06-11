@@ -837,13 +837,15 @@ const AstroObservationApp = () => {
                   <span className="mr-2">🌙</span>
                   Moon Today
                 </h3>
-                <div className="flex justify-start">
-                  <img
-                    src={process.env.PUBLIC_URL + "/images/full-moon.jpg"}
-                    alt="Full Moon"
-                    className="max-h-48"
-                  />
-                </div>
+                <iframe
+                  title="Moon Giant Phase"
+                  src="https://www.moongiant.com/phase/today/"
+                  width="300"
+                  height="450"
+                  frameBorder="0"
+                  scrolling="no"
+                  style={{ background: "transparent" }}
+                ></iframe>
                 <div className="text-xs text-gray-400 mt-2">
                   Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener">MoonGiant.com</a>
                 </div>
