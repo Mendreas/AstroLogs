@@ -774,8 +774,8 @@ const AstroObservationApp = () => {
                           type="text"
                           value={placeInput}
                           onChange={handlePlaceInput}
-                          placeholder={placeName}
-                          className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                          placeholder="Enter location"
+                          className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                         />
                         {locationSuggestions.length > 0 && (
                           <ul className="absolute left-0 right-0 bg-white text-black z-10">
@@ -1292,7 +1292,8 @@ const AstroObservationApp = () => {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                    placeholder="Object name"
+                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                     required
                   />
                 </div>
@@ -1302,7 +1303,7 @@ const AstroObservationApp = () => {
                   <select
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                   >
                     <option value="star">Star</option>
                     <option value="galaxy">Galaxy</option>
@@ -1319,7 +1320,7 @@ const AstroObservationApp = () => {
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                   />
                 </div>
 
@@ -1329,7 +1330,8 @@ const AstroObservationApp = () => {
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                    placeholder="Location"
+                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                   />
                 </div>
 
@@ -1338,20 +1340,20 @@ const AstroObservationApp = () => {
                     <label className="block text-sm font-medium mb-2">RA</label>
                     <input
                       type="text"
-                      placeholder="00h 00m 00s"
                       value={formData.ra}
                       onChange={(e) => setFormData({ ...formData, ra: e.target.value })}
-                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                      placeholder="Right Ascension (e.g., 12h 34m 56s)"
+                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">DEC</label>
                     <input
                       type="text"
-                      placeholder="+00° 00' 00''"
                       value={formData.dec}
                       onChange={(e) => setFormData({ ...formData, dec: e.target.value })}
-                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                      placeholder="Declination (e.g., +45&deg; 30&apos; 00&apos;&apos;)"
+                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                     />
                   </div>
                 </div>
@@ -1359,11 +1361,11 @@ const AstroObservationApp = () => {
                 <div>
                   <label className="block text-sm font-medium mb-2">Magnitude</label>
                   <input
-                    type="number"
-                    step="0.1"
+                    type="text"
                     value={formData.magnitude}
                     onChange={(e) => setFormData({ ...formData, magnitude: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                    placeholder="Magnitude"
+                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                   />
                 </div>
 
@@ -1371,15 +1373,16 @@ const AstroObservationApp = () => {
                   <label className="block text-sm font-medium mb-2">Distance</label>
                   <div className="flex space-x-2">
                     <input
-                      type="number"
+                      type="text"
                       value={formData.distance}
                       onChange={(e) => setFormData({ ...formData, distance: e.target.value })}
-                      className="flex-1 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                      placeholder="Distance"
+                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                     />
                     <select
                       value={formData.distanceUnit}
                       onChange={(e) => setFormData({ ...formData, distanceUnit: e.target.value })}
-                      className="p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                      className="p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                     >
                       <option value="ly">Light Years</option>
                       <option value="AU">AU</option>
@@ -1393,7 +1396,7 @@ const AstroObservationApp = () => {
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                     rows={3}
                     placeholder="Notes about your observation..."
                   />
@@ -1405,7 +1408,7 @@ const AstroObservationApp = () => {
                     type="text"
                     value={formData.image}
                     onChange={e => setFormData({ ...formData, image: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                     placeholder="Paste image link here (e.g., from iCloud, Imgur, etc.)"
                   />
                 </div>
@@ -1439,7 +1442,7 @@ const AstroObservationApp = () => {
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                   />
                   {formData.image && (
                     <img src={formData.image} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg" />
