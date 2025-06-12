@@ -625,6 +625,14 @@ const AstroObservationApp = () => {
     event.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  // Adicionar useEffect para detectar iOS
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    if (isIOS) {
+      document.body.classList.add('ios-device');
+    }
+  }, []);
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -1096,17 +1104,20 @@ const AstroObservationApp = () => {
               {/* Clear Outside widget */}
               <div className="mt-8">
                 {userLocation && (
-                  <a
-                    href={`https://clearoutside.com/forecast/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <img
-                      src={`https://clearoutside.com/forecast_image_large/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}/forecast.png`}
-                      alt="Clear Outside Forecast"
-                      style={{ width: '100%', maxWidth: 800 }}
-                    />
-                  </a>
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <h3 className="text-lg font-bold mb-4">Clear Outside Forecast</h3>
+                    <a 
+                      href={`https://clearoutside.com/forecast/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img 
+                        src={`https://clearoutside.com/forecast_image_large/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}/forecast.png`}
+                        alt="Clear Outside Forecast"
+                        style={{ width: '100%', maxWidth: 800 }}
+                      />
+                    </a>
+                  </div>
                 )}
               </div>
             </div>
@@ -1274,7 +1285,7 @@ const AstroObservationApp = () => {
         {/* Add Observation Modal */}
         {showAddForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative ios-form" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold">{editObservationId !== null ? 'Edit Observation' : 'Add Observation'}</h3>
                 <button
@@ -1295,6 +1306,7 @@ const AstroObservationApp = () => {
                     placeholder="Object name"
                     className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                     required
+                    inputMode="text"
                   />
                 </div>
 

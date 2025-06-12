@@ -32,3 +32,65 @@ select.ios-input {
   background-image: none;
   padding-right: 1rem;
 }
+
+/* Estilos globais para iOS */
+.ios-device input,
+.ios-device textarea,
+.ios-device select {
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: 16px !important;
+}
+
+.ios-device .ios-form {
+  -webkit-overflow-scrolling: touch;
+}
+
+.ios-device .ios-input {
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: 16px !important;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #4B5563;
+  background-color: #374151;
+  color: white;
+}
+
+/* Prevenir zoom em inputs no iOS */
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+  select,
+  textarea,
+  input {
+    font-size: 16px !important;
+  }
+}
+
+/* Ajustes para o teclado virtual do iOS */
+.ios-device .ios-form {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Ajustes para inputs específicos */
+.ios-device input[type="date"],
+.ios-device input[type="datetime-local"],
+.ios-device input[type="month"],
+.ios-device input[type="week"],
+.ios-device input[type="time"] {
+  min-height: 44px;
+}
+
+/* Ajustes para o modal no iOS */
+.ios-device .modal-content {
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom);
+}
