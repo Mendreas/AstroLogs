@@ -1008,9 +1008,25 @@ const AstroObservationApp = () => {
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold mb-4 flex items-center">
                   <span className="mr-2">🪐</span>
-                  Solar System Animation
+                  Solar System
                 </h2>
-                <SolarSystemAnimation />
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <iframe 
+                    height="600" 
+                    style={{width: "100%"}} 
+                    scrolling="no" 
+                    title="CSS 3D Solar System" 
+                    src="https://codepen.io/juliangarnier/embed/krNqZO?default-tab=result" 
+                    frameBorder="no" 
+                    loading="lazy" 
+                    allowTransparency={true} 
+                    allowFullScreen={true}
+                  >
+                    See the Pen <a href="https://codepen.io/juliangarnier/pen/krNqZO">
+                    CSS 3D Solar System</a> by Julian Garnier (<a href="https://codepen.io/juliangarnier">@juliangarnier</a>)
+                    on <a href="https://codepen.io">CodePen</a>.
+                  </iframe>
+                </div>
               </div>
             )}
 
