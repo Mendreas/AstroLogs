@@ -166,3 +166,17 @@ select.ios-input {
   z-index: 10010;
   background: transparent;
 }
+
+body .fixed-translate-widget,
+.fixed-translate-widget.elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129 {
+  position: fixed !important;
+  top: 16px !important;
+  right: 24px !important;
+  left: auto !important;
+  z-index: 10010 !important;
+  background: transparent !important;
+  margin: 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}

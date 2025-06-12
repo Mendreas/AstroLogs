@@ -653,6 +653,18 @@ const AstroObservationApp = () => {
     setIsIphone(/iPhone/.test(navigator.userAgent));
   }, []);
 
+  useEffect(() => {
+    const fixWidget = () => {
+      const el = document.querySelector('.fixed-translate-widget');
+      if (el) {
+        el.setAttribute('style', 'position:fixed !important; top:16px !important; right:24px !important; left:auto !important; z-index:10010 !important; background:transparent !important; margin:0 !important; width:auto !important; min-width:0 !important; max-width:none !important;');
+      }
+    };
+    fixWidget();
+    window.addEventListener('resize', fixWidget);
+    return () => window.removeEventListener('resize', fixWidget);
+  }, []);
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
