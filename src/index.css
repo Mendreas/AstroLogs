@@ -157,3 +157,12 @@ select.ios-input {
   color: #1a0000 !important;
   border-color: #ff4d4d !important;
 }
+
+/* Widget de tradução fixo no topo direito */
+.fixed-translate-widget {
+  position: fixed !important;
+  top: 16px;
+  right: 24px;
+  z-index: 10010;
+  background: transparent;
+}

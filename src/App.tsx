@@ -688,7 +688,7 @@ const AstroObservationApp = () => {
                   </button>
                 </div>
               </div>
-              <div className="elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129" data-elfsight-app-lazy style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', height: '40px' }}></div>
+              <div className="elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129 fixed-translate-widget" data-elfsight-app-lazy style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', height: '40px' }}></div>
             </div>
           </header>
           <nav className={`border-t border-gray-700 ${redFilter ? '' : ''}`} style={{ paddingLeft: '10px', paddingRight: '10px' }}>
