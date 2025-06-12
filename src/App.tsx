@@ -659,27 +659,29 @@ const AstroObservationApp = () => {
       )}
       <div className="min-h-screen bg-gray-900 text-white">
         {/* Header */}
-        <header className="bg-gray-800 p-4 shadow-lg" style={{ paddingLeft: '10px', paddingRight: '10px' }}>
+        <header className={`bg-gray-800 p-4 shadow-lg${redFilter ? ' bg-red-900' : ''}`} style={{ paddingLeft: '10px', paddingRight: '10px' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="text-2xl">🔭</div>
               <h1 className="text-2xl font-bold">AstroLog</h1>
             </div>
             <div className="flex-1 flex justify-center">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
                 <button
                   onClick={() => setRedFilter(r => !r)}
-                  className={`px-4 py-2 rounded ${redFilter ? 'bg-red-700 text-white' : 'bg-gray-700 text-red-300'} font-bold`}
+                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
                   title="Toggle red filter for night vision"
+                  style={{ minWidth: 40, minHeight: 40 }}
                 >
-                  {redFilter ? 'Red Filter: ON' : 'Red Filter: OFF'}
+                  <span style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', background: 'red', border: redFilter ? '2px solid #fff' : '2px solid #fff' }}></span>
                 </button>
                 <button
                   onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center space-x-2"
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+                  title="Add Observation"
+                  style={{ minWidth: 40, minHeight: 40 }}
                 >
-                  <Plus size={20} />
-                  <span>Add</span>
+                  <Plus size={22} />
                 </button>
               </div>
             </div>
