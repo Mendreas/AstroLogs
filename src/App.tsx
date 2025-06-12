@@ -126,6 +126,7 @@ const AstroObservationApp = () => {
   const [visibleObjectsNow, setVisibleObjectsNow] = useState<any[]>([]);
   const [searchText, setSearchText] = useState("");
   const [events, setEvents] = useState<EventType[]>([]);
+  const [isIphone, setIsIphone] = useState(false);
 
   // Exemplo de exoplanetas famosos
   const exoplanets = [
@@ -648,6 +649,10 @@ const AstroObservationApp = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    setIsIphone(/iPhone/.test(navigator.userAgent));
+  }, []);
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -655,650 +660,649 @@ const AstroObservationApp = () => {
         <div className="red-filter-overlay" />
       )}
       <div className={`min-h-screen${redFilter ? ' red-filter-text bg-[#1a0000]' : ' text-white bg-gray-900'}`}>
-        {/* Header */}
-        <header className={`p-4 shadow-lg ${redFilter ? 'red-filter-header' : 'bg-gray-800'}`} style={{ paddingLeft: '10px', paddingRight: '10px' }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="text-2xl">🔭</div>
-              <h1 className="text-2xl font-bold">AstroLog</h1>
-            </div>
-            <div className="flex-1 flex justify-center">
+        {/* Header + Navigation container */}
+        <div className={`w-full mx-auto rounded-b-2xl shadow-lg ${redFilter ? 'red-filter-header' : 'bg-gray-800'}`} style={{ maxWidth: 1600 }}>
+          <header className={`p-4 shadow-none ${redFilter ? '' : ''}`} style={{ paddingLeft: '10px', paddingRight: '10px', borderBottom: 'none' }}>
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setRedFilter(r => !r)}
-                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'red-filter-btn' : 'bg-blue-600 hover:bg-blue-700'}`}
-                  title="Toggle red filter for night vision"
-                  style={{ minWidth: 40, minHeight: 40 }}
-                >
-                  <span style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', background: 'red', border: '2px solid #fff' }}></span>
-                </button>
-                <button
-                  onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
-                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'red-filter-btn' : 'bg-blue-600 hover:bg-blue-700'}`}
-                  title="Add Observation"
-                  style={{ minWidth: 40, minHeight: 40 }}
-                >
-                  <Plus size={22} />
-                </button>
+                <div className="text-2xl">🔭</div>
+                <h1 className="text-2xl font-bold">AstroLog</h1>
               </div>
+              <div className="flex-1 flex justify-center">
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setRedFilter(r => !r)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'red-filter-btn' : 'bg-blue-600 hover:bg-blue-700'}`}
+                    title="Toggle red filter for night vision"
+                    style={{ minWidth: 40, minHeight: 40 }}
+                  >
+                    <span style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', background: 'red', border: '2px solid #fff' }}></span>
+                  </button>
+                  <button
+                    onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
+                    className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'red-filter-btn' : 'bg-blue-600 hover:bg-blue-700'}`}
+                    title="Add Observation"
+                    style={{ minWidth: 40, minHeight: 40 }}
+                  >
+                    <Plus size={22} />
+                  </button>
+                </div>
+              </div>
+              <div className="elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129" data-elfsight-app-lazy style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', height: '40px' }}></div>
             </div>
-            <div className="elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129" data-elfsight-app-lazy style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', height: '40px' }}></div>
-          </div>
-        </header>
-
-        {/* Navigation */}
-        <nav className="bg-gray-800 border-t border-gray-700" style={{ paddingLeft: '10px', paddingRight: '10px' }}>
-          <div className="flex space-x-8">
-            {[
-              { id: 'home', label: 'Home', icon: '🏠' },
-              { id: 'objects', label: 'Objects', icon: '🌟' },
-              { id: 'resources', label: 'Resources', icon: '📚' },
-              { id: 'links', label: 'Useful Links', icon: '🔗' },
-              { id: 'calendar', label: 'Calendar', icon: '📅' },
-              { id: 'settings', label: 'Settings', icon: '⚙️' }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-2 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-400'
-                    : 'border-transparent text-gray-300 hover:text-gray-200'
-                }`}
-              >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </nav>
-
-        <main className="w-full p-0 m-0" style={{ paddingLeft: '10px', paddingRight: '10px' }}>
-          {/* Home Tab */}
-          {activeTab === 'home' && (
-            <div className="space-y-6">
-              {/* What can I observe now section */}
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center">
-                  <Eye className="mr-2" size={24} />
-                  What can I observe now?
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Celestial Object:</label>
-                    <select
-                      value={selectedObject ? selectedObject.name : ""}
-                      onChange={e => {
-                        const name = e.target.value;
-                        const found = allObjects.find(obj => obj.name === name) || null;
-                        setSelectedObject(found);
-                      }}
-                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                    >
-                      <option value="">Select object...</option>
-                      {allObjects.map((obj: CelestialObject) => (
-                        <option key={obj.name} value={obj.name}>{obj.name}</option>
-                      ))}
-                    </select>
-                    {selectedObject && (
-                      <div className="space-x-2 mt-2">
-                        {/* Planets (Solar System) */}
-                        {selectedObject.type === "planet" && (
-                          <>
-                            <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                            <a href={jplSsdUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a>
-                            <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                          </>
-                        )}
-
-                        {/* Messier/NGC/Deep Sky Objects */}
-                        {(selectedObject.type === "galaxy" ||
-                          selectedObject.type === "nebula" ||
-                          selectedObject.type === "cluster" ||
-                          selectedObject.type === "deep_sky") && (
-                          <>
-                            <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                            <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                          </>
-                        )}
-
-                        {/* Exoplanets */}
-                        {selectedObject.type === "exoplanet" && (
-                          <>
-                            <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                            <a href={nasaExoplanetUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a>
-                            <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                          </>
-                        )}
-
-                        {/* Stars */}
-                        {selectedObject.type === "star" && (
-                          <>
-                            <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                            <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Date & Time:</label>
-                    <DatePicker
-                      selected={currentTime}
-                      onChange={(date: Date | null) => date && setCurrentTime(date)}
-                      showTimeSelect
-                      dateFormat="Pp"
-                      className="w-44 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Location:</label>
-                    <div className="flex space-x-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          value={placeInput}
-                          onChange={handlePlaceInput}
-                          placeholder="Enter location"
-                          className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                        />
-                        {locationSuggestions.length > 0 && (
-                          <ul className="absolute left-0 right-0 bg-white text-black z-10">
-                            {locationSuggestions.map(suggestion => (
-                              <li
-                                key={suggestion.place_id}
-                                onClick={() => {
-                                  setUserLocation({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon) });
-                                  setPlaceInput(suggestion.display_name);
-                                  setLocationSuggestions([]);
-                                }}
-                                className="cursor-pointer hover:bg-gray-200 px-2 py-1"
-                              >
-                                {suggestion.display_name}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      <button
-                        onClick={getLocationData}
-                        className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded"
-                        title="Get current location"
-                        type="button"
-                      >
-                        <MapPin size={16} />
-                      </button>
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">{placeName}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Coordinates:</label>
-                    <div className="flex space-x-2">
-                      <input
-                        type="number"
-                        value={userLocation.lat.toFixed(2)}
-                        onChange={(e) => setUserLocation({ ...userLocation, lat: parseFloat(e.target.value) })}
-                        className="w-24 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                        step="0.01"
-                      />
-                      <input
-                        type="number"
-                        value={userLocation.lng.toFixed(2)}
-                        onChange={(e) => setUserLocation({ ...userLocation, lng: parseFloat(e.target.value) })}
-                        className="w-24 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                        step="0.01"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div className="mb-2">
-                    <a
-                      href={`https://lightpollutionmap.app/?lat=${userLocation.lat.toFixed(5)}&lng=${userLocation.lng.toFixed(5)}&zoom=6`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 underline font-bold"
-                    >
-                      View Light Pollution Map (Bortle Scale)
-                    </a>
-                  </div>
-                  <div className="mb-2">
-                    <span className="font-bold">Sky Chart:</span>{' '}
-                    <a
-                      href={`https://stellarium-web.org/?lat=${userLocation.lat}&lon=${userLocation.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 underline"
-                    >
-                      View in Stellarium Web
-                    </a>
-                  </div>
-                </div>
+          </header>
+          <nav className={`border-t border-gray-700 ${redFilter ? '' : ''}`} style={{ paddingLeft: '10px', paddingRight: '10px' }}>
+            <div className="flex space-x-8">
+              {[
+                { id: 'home', label: 'Home', icon: '🏠' },
+                { id: 'objects', label: 'Objects', icon: '🌟' },
+                { id: 'resources', label: 'Resources', icon: '📚' },
+                { id: 'links', label: 'Useful Links', icon: '🔗' },
+                { id: 'calendar', label: 'Calendar', icon: '📅' },
+                { id: 'settings', label: 'Settings', icon: '⚙️' }
+              ].map(tab => (
                 <button
-                  className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2 mt-4"
-                  onClick={() => setShowSkyChart(!showSkyChart)}
-                  type="button"
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-400'
+                      : 'border-transparent text-gray-300 hover:text-gray-200'
+                  }`}
                 >
-                  <Sun size={16} />
-                  <span>{showSkyChart ? 'Hide' : 'Show'} Simple Visibility Chart</span>
+                  <span className="mr-2">{tab.icon}</span>
+                  {!isIphone && tab.label}
                 </button>
-                {showSkyChart && (
-                  <div className="mt-4">
-                    <div className="font-bold mb-2">Visibilidade (próximas 6 horas):</div>
-                    <div className="flex space-x-2">
-                      {Array.from({ length: 6 }).map((_, i) => {
-                        const hour = (currentTime.getHours() + i) % 24;
-                        const count = getVisibleObjectsAtHour(userLocation.lat, userLocation.lng, currentTime, hour);
-                        return (
-                          <div key={i} className="flex flex-col items-center">
-                            <div className="text-xs text-gray-400">{hour}:00</div>
-                            <button
-                              className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-700 mt-1 hover:bg-green-600"
-                              onClick={() => {
-                                const newTime = new Date(currentTime);
-                                newTime.setHours(hour, 0, 0, 0);
-                                setCurrentTime(newTime);
-                              }}
-                            >
-                              {count}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">Número de objetos visíveis por hora (planetas, estrelas, deep sky, exoplanetas)</div>
-                  </div>
-                )}
-              </div>
+              ))}
+            </div>
+          </nav>
+          <main className="w-full px-4 py-6" style={{ maxWidth: 1600, margin: '0 auto' }}>
+            {/* Home Tab */}
+            {activeTab === 'home' && (
+              <div className="space-y-6">
+                {/* What can I observe now section */}
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <h2 className="text-xl font-bold mb-4 flex items-center">
+                    <Eye className="mr-2" size={24} />
+                    What can I observe now?
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Celestial Object:</label>
+                      <select
+                        value={selectedObject ? selectedObject.name : ""}
+                        onChange={e => {
+                          const name = e.target.value;
+                          const found = allObjects.find(obj => obj.name === name) || null;
+                          setSelectedObject(found);
+                        }}
+                        className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                      >
+                        <option value="">Select object...</option>
+                        {allObjects.map((obj: CelestialObject) => (
+                          <option key={obj.name} value={obj.name}>{obj.name}</option>
+                        ))}
+                      </select>
+                      {selectedObject && (
+                        <div className="space-x-2 mt-2">
+                          {/* Planets (Solar System) */}
+                          {selectedObject.type === "planet" && (
+                            <>
+                              <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                              <a href={jplSsdUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a>
+                              <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                            </>
+                          )}
 
-              {/* Currently Visible Objects */}
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h3 className="text-lg font-bold mb-4">🌠 Objects</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {visibleObjectsNow.length === 0 && (
-                    <div className="text-gray-400">No objects are currently visible.</div>
-                  )}
-                  {visibleObjectsNow.map(obj => (
-                    <div key={obj.name} className="bg-gray-700 p-4 rounded-lg">
-                      <h4 className="font-bold text-blue-400">{obj.name}</h4>
-                      <p className="text-sm text-gray-300">Type: {obj.displayType}</p>
-                      {obj.ra && obj.dec && (
-                        <p className="text-sm text-gray-300">RA: {obj.ra} | Dec: {obj.dec}</p>
+                          {/* Messier/NGC/Deep Sky Objects */}
+                          {(selectedObject.type === "galaxy" ||
+                            selectedObject.type === "nebula" ||
+                            selectedObject.type === "cluster" ||
+                            selectedObject.type === "deep_sky") && (
+                            <>
+                              <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                              <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                            </>
+                          )}
+
+                          {/* Exoplanets */}
+                          {selectedObject.type === "exoplanet" && (
+                            <>
+                              <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                              <a href={nasaExoplanetUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a>
+                              <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                            </>
+                          )}
+
+                          {/* Stars */}
+                          {selectedObject.type === "star" && (
+                            <>
+                              <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                              <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                            </>
+                          )}
+                        </div>
                       )}
-                      {/* Links: personalize conforme o tipo */}
-                      <div className="space-x-2 mt-2">
-                        <a href={wikipediaUrl(obj.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                        <a href={simbadUrl(obj.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                        {obj.type === "planet" && (
-                          <a href={jplSsdUrl(obj.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Date & Time:</label>
+                      <DatePicker
+                        selected={currentTime}
+                        onChange={(date: Date | null) => date && setCurrentTime(date)}
+                        showTimeSelect
+                        dateFormat="Pp"
+                        className="w-44 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Location:</label>
+                      <div className="flex space-x-2">
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            value={placeInput}
+                            onChange={handlePlaceInput}
+                            placeholder="Enter location"
+                            className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
+                          />
+                          {locationSuggestions.length > 0 && (
+                            <ul className="absolute left-0 right-0 bg-white text-black z-10">
+                              {locationSuggestions.map(suggestion => (
+                                <li
+                                  key={suggestion.place_id}
+                                  onClick={() => {
+                                    setUserLocation({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon) });
+                                    setPlaceInput(suggestion.display_name);
+                                    setLocationSuggestions([]);
+                                  }}
+                                  className="cursor-pointer hover:bg-gray-200 px-2 py-1"
+                                >
+                                  {suggestion.display_name}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                        <button
+                          onClick={getLocationData}
+                          className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded"
+                          title="Get current location"
+                          type="button"
+                        >
+                          <MapPin size={16} />
+                        </button>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">{placeName}</div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Coordinates:</label>
+                      <div className="flex space-x-2">
+                        <input
+                          type="number"
+                          value={userLocation.lat.toFixed(2)}
+                          onChange={(e) => setUserLocation({ ...userLocation, lat: parseFloat(e.target.value) })}
+                          className="w-24 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                          step="0.01"
+                        />
+                        <input
+                          type="number"
+                          value={userLocation.lng.toFixed(2)}
+                          onChange={(e) => setUserLocation({ ...userLocation, lng: parseFloat(e.target.value) })}
+                          className="w-24 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                          step="0.01"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="mb-2">
+                      <a
+                        href={`https://lightpollutionmap.app/?lat=${userLocation.lat.toFixed(5)}&lng=${userLocation.lng.toFixed(5)}&zoom=6`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 underline font-bold"
+                      >
+                        View Light Pollution Map (Bortle Scale)
+                      </a>
+                    </div>
+                    <div className="mb-2">
+                      <span className="font-bold">Sky Chart:</span>{' '}
+                      <a
+                        href={`https://stellarium-web.org/?lat=${userLocation.lat}&lon=${userLocation.lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 underline"
+                      >
+                        View in Stellarium Web
+                      </a>
+                    </div>
+                  </div>
+                  <button
+                    className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2 mt-4"
+                    onClick={() => setShowSkyChart(!showSkyChart)}
+                    type="button"
+                  >
+                    <Sun size={16} />
+                    <span>{showSkyChart ? 'Hide' : 'Show'} Simple Visibility Chart</span>
+                  </button>
+                  {showSkyChart && (
+                    <div className="mt-4">
+                      <div className="font-bold mb-2">Visibilidade (próximas 6 horas):</div>
+                      <div className="flex space-x-2">
+                        {Array.from({ length: 6 }).map((_, i) => {
+                          const hour = (currentTime.getHours() + i) % 24;
+                          const count = getVisibleObjectsAtHour(userLocation.lat, userLocation.lng, currentTime, hour);
+                          return (
+                            <div key={i} className="flex flex-col items-center">
+                              <div className="text-xs text-gray-400">{hour}:00</div>
+                              <button
+                                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-700 mt-1 hover:bg-green-600"
+                                onClick={() => {
+                                  const newTime = new Date(currentTime);
+                                  newTime.setHours(hour, 0, 0, 0);
+                                  setCurrentTime(newTime);
+                                }}
+                              >
+                                {count}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">Número de objetos visíveis por hora (planetas, estrelas, deep sky, exoplanetas)</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Currently Visible Objects */}
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <h3 className="text-lg font-bold mb-4">🌠 Objects</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {visibleObjectsNow.length === 0 && (
+                      <div className="text-gray-400">No objects are currently visible.</div>
+                    )}
+                    {visibleObjectsNow.map(obj => (
+                      <div key={obj.name} className="bg-gray-700 p-4 rounded-lg">
+                        <h4 className="font-bold text-blue-400">{obj.name}</h4>
+                        <p className="text-sm text-gray-300">Type: {obj.displayType}</p>
+                        {obj.ra && obj.dec && (
+                          <p className="text-sm text-gray-300">RA: {obj.ra} | Dec: {obj.dec}</p>
                         )}
-                        {obj.type === "exoplanet" && (
-                          <a href={nasaExoplanetUrl(obj.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a>
+                        {/* Links: personalize conforme o tipo */}
+                        <div className="space-x-2 mt-2">
+                          <a href={wikipediaUrl(obj.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                          <a href={simbadUrl(obj.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
+                          {obj.type === "planet" && (
+                            <a href={jplSsdUrl(obj.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a>
+                          )}
+                          {obj.type === "exoplanet" && (
+                            <a href={nasaExoplanetUrl(obj.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Moon Phase */}
+                <div className="bg-gray-800 rounded-lg p-6" style={{ minHeight: '340px', overflow: 'visible' }}>
+                  <h3 className="text-lg font-bold mb-4 flex items-center">
+                    <span className="mr-2">🌙</span>
+                    Moon Today
+                  </h3>
+                  <iframe
+                    title="Moon Giant Phase"
+                    src="https://www.moongiant.com/phase/today/"
+                    width="300"
+                    height="450"
+                    frameBorder="0"
+                    scrolling="no"
+                    style={{ background: "transparent" }}
+                  ></iframe>
+                  <div className="text-xs text-gray-400 mt-2">
+                    Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener">MoonGiant.com</a>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Objects Tab */}
+            {activeTab === 'objects' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">My Observations</h2>
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={() => setShowFavorites(!showFavorites)}
+                      className={`px-4 py-2 rounded ${showFavorites ? 'bg-yellow-600' : 'bg-gray-600'}`}
+                    >
+                      <Star size={16} className="inline mr-2" />
+                      Favorites
+                    </button>
+                    <select
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="p-2 bg-gray-700 rounded border border-gray-600"
+                    >
+                      <option value="all">All Types</option>
+                      <option value="star">Stars</option>
+                      <option value="galaxy">Galaxies</option>
+                      <option value="cluster">Clusters</option>
+                      <option value="nebula">Nebulae</option>
+                      <option value="planet">Planets</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredObservations.map(obs => (
+                    <div
+                      key={obs.id}
+                      className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:ring-2 hover:ring-blue-400"
+                      onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-bold text-lg text-blue-400">{obs.name}</h3>
+                        {obs.favorite && <Star className="text-yellow-400 fill-current" size={20} />}
+                      </div>
+                      {obs.image && (
+                        <div className="mb-3">
+                          <img
+                            src={obs.image}
+                            alt={obs.name}
+                            className="w-full h-32 object-cover rounded-lg hover:opacity-80 cursor-pointer"
+                            onClick={() => handleImageClick(obs.image)}
+                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          />
+                        </div>
+                      )}
+                      <p className="text-sm text-gray-300 mb-1">Type: {obs.type}</p>
+                      <p className="text-sm text-gray-300 mb-1">Date: {obs.date}</p>
+                      <p className="text-sm text-gray-300 mb-1">Location: {obs.location}</p>
+                      {obs.magnitude && <p className="text-sm text-gray-300 mb-1">Magnitude: {obs.magnitude}</p>}
+                      {obs.ra && <p className="text-sm text-gray-300 mb-1">RA: {obs.ra} | Dec: {obs.dec}</p>}
+                      {obs.distance && <p className="text-sm text-gray-300 mb-1">Distance: {obs.distance} {obs.distanceUnit}</p>}
+                      {obs.description && <p className="text-sm text-gray-400 mt-2">{obs.description}</p>}
+                      <div>
+                        <a href={simbadUrl(obs.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a> |{" "}
+                        <a href={wikipediaUrl(obs.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
+                        {/* For exoplanets: */}
+                        {obs.type === "exoplanet" && (
+                          <> | <a href={nasaExoplanetUrl(obs.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a></>
+                        )}
+                        {/* For solar system objects: */}
+                        {obs.type === "planet" && (
+                          <> | <a href={jplSsdUrl(obs.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a></>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
 
-              {/* Moon Phase */}
-              <div className="bg-gray-800 rounded-lg p-6" style={{ minHeight: '340px', overflow: 'visible' }}>
-                <h3 className="text-lg font-bold mb-4 flex items-center">
-                  <span className="mr-2">🌙</span>
-                  Moon Today
-                </h3>
-                <iframe
-                  title="Moon Giant Phase"
-                  src="https://www.moongiant.com/phase/today/"
-                  width="300"
-                  height="450"
-                  frameBorder="0"
-                  scrolling="no"
-                  style={{ background: "transparent" }}
-                ></iframe>
-                <div className="text-xs text-gray-400 mt-2">
-                  Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener">MoonGiant.com</a>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Objects Tab */}
-          {activeTab === 'objects' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">My Observations</h2>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => setShowFavorites(!showFavorites)}
-                    className={`px-4 py-2 rounded ${showFavorites ? 'bg-yellow-600' : 'bg-gray-600'}`}
-                  >
-                    <Star size={16} className="inline mr-2" />
-                    Favorites
-                  </button>
-                  <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="p-2 bg-gray-700 rounded border border-gray-600"
-                  >
-                    <option value="all">All Types</option>
-                    <option value="star">Stars</option>
-                    <option value="galaxy">Galaxies</option>
-                    <option value="cluster">Clusters</option>
-                    <option value="nebula">Nebulae</option>
-                    <option value="planet">Planets</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredObservations.map(obs => (
-                  <div
-                    key={obs.id}
-                    className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:ring-2 hover:ring-blue-400"
-                    onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-bold text-lg text-blue-400">{obs.name}</h3>
-                      {obs.favorite && <Star className="text-yellow-400 fill-current" size={20} />}
-                    </div>
-                    {obs.image && (
-                      <div className="mb-3">
-                        <img
-                          src={obs.image}
-                          alt={obs.name}
-                          className="w-full h-32 object-cover rounded-lg hover:opacity-80 cursor-pointer"
-                          onClick={() => handleImageClick(obs.image)}
-                          onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                        />
-                      </div>
-                    )}
-                    <p className="text-sm text-gray-300 mb-1">Type: {obs.type}</p>
-                    <p className="text-sm text-gray-300 mb-1">Date: {obs.date}</p>
-                    <p className="text-sm text-gray-300 mb-1">Location: {obs.location}</p>
-                    {obs.magnitude && <p className="text-sm text-gray-300 mb-1">Magnitude: {obs.magnitude}</p>}
-                    {obs.ra && <p className="text-sm text-gray-300 mb-1">RA: {obs.ra} | Dec: {obs.dec}</p>}
-                    {obs.distance && <p className="text-sm text-gray-300 mb-1">Distance: {obs.distance} {obs.distanceUnit}</p>}
-                    {obs.description && <p className="text-sm text-gray-400 mt-2">{obs.description}</p>}
-                    <div>
-                      <a href={simbadUrl(obs.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a> |{" "}
-                      <a href={wikipediaUrl(obs.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                      {/* For exoplanets: */}
-                      {obs.type === "exoplanet" && (
-                        <> | <a href={nasaExoplanetUrl(obs.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a></>
-                      )}
-                      {/* For solar system objects: */}
-                      {obs.type === "planet" && (
-                        <> | <a href={jplSsdUrl(obs.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a></>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {filteredObservations.length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">🔭</div>
-                  <h3 className="text-xl font-bold mb-2">No observations yet</h3>
-                  <p className="text-gray-400 mb-4">Start logging your astronomical observations!</p>
-                  <button
-                    onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
-                    className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg"
-                  >
-                    Add First Observation
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Resources Tab */}
-          {activeTab === 'resources' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold">Astronomical Resources</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">Catalogs</h3>
-                  <ul className="space-y-2">
-                    <li><a href="https://hubblesite.org/contents/media/images?Type=2&page=1&filterUUID=2e1a4b24-07ab-4d85-aa47-5af4747b21e2" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Messier Catalog (NASA/Hubble)</a></li>
-                    <li><a href="https://www.ngcicproject.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">NGC Catalog</a></li>
-                    <li><a href="https://in-the-sky.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">In the Sky</a></li>
-                  </ul>
-                </div>
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">Tools</h3>
-                  <ul className="space-y-2">
-                  <li><a href="https://www.timeanddate.com/moon/phases/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Moon Phases</a></li>
-                    <li><a href="https://stellarium-web.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Stellarium Web</a></li>
-                    <li><a href="https://www.heavens-above.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Heavens Above</a></li>
-                  </ul>
-                </div>
-              </div>
-              <div className="meteoblue-widgets flex flex-wrap gap-4 mt-8">
-                <div className="max-w-[480px] flex-shrink-0" style={{ width: 480 }}>
-                  <iframe
-                    title="Previsão do tempo meteoblue"
-                    src="https://www.meteoblue.com/pt/tempo/widget/three?geoloc=detect&nocurrent=0&noforecast=0&days=4&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&layout=image"
-                    frameBorder="0" scrolling="no" allowTransparency={true}
-                    sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
-                    className="w-full"
-                    style={{ height: 590 }}
-                  ></iframe>
-                  <div>
-                    <a href="https://www.meteoblue.com/pt/tempo/semana/index?utm_source=three_widget&utm_medium=linkus&utm_content=three&utm_campaign=Weather%2BWidget"
-                       target="_blank" rel="noopener">meteoblue</a>
-                  </div>
-                </div>
-                <div className="max-w-[540px] flex-shrink-0" style={{ width: 540 }}>
-                  <iframe
-                    title="Observação meteoblue"
-                    src="https://www.meteoblue.com/pt/tempo/widget/seeing?geoloc=detect&noground=0"
-                    frameBorder="0" scrolling="no" allowTransparency={true}
-                    sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
-                    className="w-full"
-                    style={{ height: 775 }}
-                  ></iframe>
-                  <div>
-                    <a href="https://www.meteoblue.com/pt/tempo/previsao/seeing?utm_source=seeing_widget&utm_medium=linkus&utm_content=seeing&utm_campaign=Weather%2BWidget"
-                       target="_blank" rel="noopener">meteoblue</a>
-                  </div>
-                </div>
-                <div className="max-w-[520px] flex-shrink-0" style={{ width: 520 }}>
-                  <iframe
-                    title="Mapa meteoblue"
-                    src="https://www.meteoblue.com/pt/tempo/mapas/widget?windAnimation=1&gust=1&satellite=1&cloudsAndPrecipitation=1&temperature=1&sunshine=1&extremeForecastIndex=1&geoloc=detect&tempunit=C&windunit=km%252Fh&lengthunit=metric&zoom=5&autowidth=manu"
-                    frameBorder="0" scrolling="no" allowTransparency={true}
-                    sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
-                    className="w-full"
-                    style={{ height: 720 }}
-                  ></iframe>
-                  <div>
-                    <a href="https://www.meteoblue.com/pt/tempo/mapas/index?utm_source=map_widget&utm_medium=linkus&utm_content=map&utm_campaign=Weather%2BWidget"
-                       target="_blank" rel="noopener">meteoblue</a>
-                  </div>
-                </div>
-              </div>
-              {/* Clear Outside widget */}
-              <div className="mt-8">
-                {userLocation && (
-                  <div className="bg-gray-800 rounded-lg p-4">
-                    <h3 className="text-lg font-bold mb-4">Clear Outside Forecast</h3>
-                    <a 
-                      href={`https://clearoutside.com/forecast/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                {filteredObservations.length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🔭</div>
+                    <h3 className="text-xl font-bold mb-2">No observations yet</h3>
+                    <p className="text-gray-400 mb-4">Start logging your astronomical observations!</p>
+                    <button
+                      onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
+                      className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg"
                     >
-                      <img 
-                        src={`https://clearoutside.com/forecast_image_large/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}/forecast.png`}
-                        alt="Clear Outside Forecast"
-                        style={{ width: '100%', maxWidth: 800 }}
-                      />
-                    </a>
+                      Add First Observation
+                    </button>
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Links Tab */}
-          {activeTab === 'links' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold">Useful Links</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">Space Agencies</h3>
-                  <ul className="space-y-2">
-                    <li><a href="https://www.nasa.gov" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">NASA</a></li>
-                    <li><a href="https://www.esa.int" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">ESA</a></li>
-                    <li><a href="https://www.seti.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">SETI</a></li>
-                    <li><a href="https://www.cnsa.gov.cn" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">CNSA</a></li>
-                    <li><a href="https://www.gov.br/aeb/pt-br" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">AEB</a></li>
-                    <li><a href="https://ptspace.pt/pt/home/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">AEP (Portugal)</a></li>
-                    <li><a href="https://www.asc-csa.gc.ca" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">CSA</a></li>
-                    <li><a href="https://www.isro.gov.in" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">ISRO</a></li>
-                  </ul>
-                </div>
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">Commercial Space</h3>
-                  <ul className="space-y-2">
-                    <li><a href="https://www.spacex.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">SpaceX</a></li>
-                    <li><a href="https://www.arianespace.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Ariane</a></li>
-                    <li><a href="https://www.blueorigin.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Blue Origin</a></li>
-                  </ul>
-                </div>
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">Astronomical Societies</h3>
-                  <ul className="space-y-2">
-                    <li><a href="https://a4e.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Astronomers for Planet Earth</a></li>
-                    <li><a href="https://astronomerswithoutborders.org/home" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Astronomers Without Borders</a></li>
-                    <li><a href="https://www.iau.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">International Astronomical Union</a></li>
-                    <li><a href="https://www.imo.net/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">International Meteor Organization</a></li>
-                    <li><a href="https://www.planetary.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">The Planetary Society</a></li>
-                    <li><a href="https://eas.unige.ch/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">European Astronomical Society</a></li>
-                    <li><a href="https://www.eaae-astronomy.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">European Association for Astronomy Education</a></li>
-                    <li><a href="https://en.wikipedia.org/wiki/List_of_astronomical_societies" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Wiki List of astronomical societies</a></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Calendar Tab */}
-          {activeTab === 'calendar' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold">Astronomical Calendar</h2>
-              <div className="flex flex-col lg:flex-row gap-8 w-full">
-                <div className="bg-gray-800 rounded-lg p-6 flex-1 min-w-[320px]" style={{ maxWidth: 500, width: '100%' }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <button
-                      onClick={() => navigateCalendar('prev')}
-                      className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
-                    >
-                      ←
-                    </button>
-                    <h3 className="text-xl font-bold">
-                      {calendarDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                    </h3>
-                    <button
-                      onClick={() => navigateCalendar('next')}
-                      className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
-                    >
-                      →
-                    </button>
+            {/* Resources Tab */}
+            {activeTab === 'resources' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Astronomical Resources</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-lg font-bold mb-4">Catalogs</h3>
+                    <ul className="space-y-2">
+                      <li><a href="https://hubblesite.org/contents/media/images?Type=2&page=1&filterUUID=2e1a4b24-07ab-4d85-aa47-5af4747b21e2" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Messier Catalog (NASA/Hubble)</a></li>
+                      <li><a href="https://www.ngcicproject.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">NGC Catalog</a></li>
+                      <li><a href="https://in-the-sky.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">In the Sky</a></li>
+                    </ul>
                   </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                      <div key={day} className="text-center font-bold p-2 text-gray-400">
-                        {day}
-                      </div>
-                    ))}
-                    {getDaysInMonth(calendarDate).map((day, index) => {
-                      const isToday = day === new Date().getDate() &&
-                        calendarDate.getMonth() === new Date().getMonth() &&
-                        calendarDate.getFullYear() === new Date().getFullYear();
-                      const hasObs = day && getObservationsForDay(calendarDate, day).length > 0;
-                      return (
-                        <div
-                          key={index}
-                          className={`text-center p-2 rounded cursor-pointer min-h-[40px] flex items-center justify-center ${
-                            day ? 'hover:bg-gray-700' : ''
-                          } ${
-                            isToday ? 'bg-blue-600 text-white' : ''
-                          } ${
-                            hasObs ? 'ring-2 ring-green-400' : ''
-                          } ${
-                            calendarSelectedDay === day ? 'bg-green-700 text-white' : ''
-                          }`}
-                          onClick={() => day && setCalendarSelectedDay(day)}
-                        >
-                          {day || ''}
-                        </div>
-                      );
-                    })}
+                  <div className="bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-lg font-bold mb-4">Tools</h3>
+                    <ul className="space-y-2">
+                    <li><a href="https://www.timeanddate.com/moon/phases/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Moon Phases</a></li>
+                      <li><a href="https://stellarium-web.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Stellarium Web</a></li>
+                      <li><a href="https://www.heavens-above.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Heavens Above</a></li>
+                    </ul>
                   </div>
-                  {/* Show observations for selected day */}
-                  {calendarSelectedDay && (
-                    <div className="mt-6">
-                      <h4 className="font-bold mb-2">Observations for {calendarDate.getFullYear()}-{(calendarDate.getMonth() + 1).toString().padStart(2, '0')}-{calendarSelectedDay.toString().padStart(2, '0')}</h4>
-                      {getObservationsForDay(calendarDate, calendarSelectedDay).length === 0 ? (
-                        <div className="text-gray-400">No observations for this day.</div>
-                      ) : (
-                        <ul className="space-y-2">
-                          {getObservationsForDay(calendarDate, calendarSelectedDay).map(obs => (
-                            <li
-                              key={obs.id}
-                              className="bg-gray-700 p-3 rounded cursor-pointer hover:ring-2 hover:ring-blue-400"
-                              onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}
-                            >
-                              <span className="font-bold text-blue-300">{obs.name}</span> ({obs.type})
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                </div>
+                <div className="meteoblue-widgets flex flex-wrap gap-4 mt-8">
+                  <div className="max-w-[480px] flex-shrink-0" style={{ width: 480 }}>
+                    <iframe
+                      title="Previsão do tempo meteoblue"
+                      src="https://www.meteoblue.com/pt/tempo/widget/three?geoloc=detect&nocurrent=0&noforecast=0&days=4&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&layout=image"
+                      frameBorder="0" scrolling="no" allowTransparency={true}
+                      sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
+                      className="w-full"
+                      style={{ height: 590 }}
+                    ></iframe>
+                    <div>
+                      <a href="https://www.meteoblue.com/pt/tempo/semana/index?utm_source=three_widget&utm_medium=linkus&utm_content=three&utm_campaign=Weather%2BWidget"
+                         target="_blank" rel="noopener">meteoblue</a>
+                    </div>
+                  </div>
+                  <div className="max-w-[540px] flex-shrink-0" style={{ width: 540 }}>
+                    <iframe
+                      title="Observação meteoblue"
+                      src="https://www.meteoblue.com/pt/tempo/widget/seeing?geoloc=detect&noground=0"
+                      frameBorder="0" scrolling="no" allowTransparency={true}
+                      sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
+                      className="w-full"
+                      style={{ height: 775 }}
+                    ></iframe>
+                    <div>
+                      <a href="https://www.meteoblue.com/pt/tempo/previsao/seeing?utm_source=seeing_widget&utm_medium=linkus&utm_content=seeing&utm_campaign=Weather%2BWidget"
+                         target="_blank" rel="noopener">meteoblue</a>
+                    </div>
+                  </div>
+                  <div className="max-w-[520px] flex-shrink-0" style={{ width: 520 }}>
+                    <iframe
+                      title="Mapa meteoblue"
+                      src="https://www.meteoblue.com/pt/tempo/mapas/widget?windAnimation=1&gust=1&satellite=1&cloudsAndPrecipitation=1&temperature=1&sunshine=1&extremeForecastIndex=1&geoloc=detect&tempunit=C&windunit=km%252Fh&lengthunit=metric&zoom=5&autowidth=manu"
+                      frameBorder="0" scrolling="no" allowTransparency={true}
+                      sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
+                      className="w-full"
+                      style={{ height: 720 }}
+                    ></iframe>
+                    <div>
+                      <a href="https://www.meteoblue.com/pt/tempo/mapas/index?utm_source=map_widget&utm_medium=linkus&utm_content=map&utm_campaign=Weather%2BWidget"
+                         target="_blank" rel="noopener">meteoblue</a>
+                    </div>
+                  </div>
+                </div>
+                {/* Clear Outside widget */}
+                <div className="mt-8">
+                  {userLocation && (
+                    <div className="bg-gray-800 rounded-lg p-4">
+                      <h3 className="text-lg font-bold mb-4">Clear Outside Forecast</h3>
+                      <a 
+                        href={`https://clearoutside.com/forecast/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <img 
+                          src={`https://clearoutside.com/forecast_image_large/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}/forecast.png`}
+                          alt="Clear Outside Forecast"
+                          style={{ width: '100%', maxWidth: 800 }}
+                        />
+                      </a>
                     </div>
                   )}
                 </div>
-                <div className="w-full max-w-[500px] max-h-[700px] overflow-y-auto bg-[#181c23] rounded-xl p-4 flex-shrink-0">
-                  <EventList events={filteredEvents} />
-                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold">Settings & Configuration</h2>
-              <div className="bg-gray-800 rounded-lg p-6">
-                <h3 className="text-lg font-bold mb-4">Data Management</h3>
-                <div className="space-y-4 flex flex-col md:flex-row md:space-y-0 md:space-x-4">
-                  <button
-                    onClick={exportObservations}
-                    className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2"
-                  >
-                    <Download size={16} />
-                    <span>Export Observations</span>
-                  </button>
-                  <label className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded flex items-center space-x-2 cursor-pointer">
-                    <Upload size={16} />
-                    <span>Import Observations</span>
-                    <input
-                      type="file"
-                      accept="application/json"
-                      onChange={handleImport}
-                      className="hidden"
-                    />
-                  </label>
-                  <button className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded flex items-center space-x-2">
-                    <Save size={16} />
-                    <span>Download Backup</span>
-                  </button>
+            {/* Links Tab */}
+            {activeTab === 'links' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Useful Links</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-lg font-bold mb-4">Space Agencies</h3>
+                    <ul className="space-y-2">
+                      <li><a href="https://www.nasa.gov" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">NASA</a></li>
+                      <li><a href="https://www.esa.int" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">ESA</a></li>
+                      <li><a href="https://www.seti.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">SETI</a></li>
+                      <li><a href="https://www.cnsa.gov.cn" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">CNSA</a></li>
+                      <li><a href="https://www.gov.br/aeb/pt-br" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">AEB</a></li>
+                      <li><a href="https://ptspace.pt/pt/home/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">AEP (Portugal)</a></li>
+                      <li><a href="https://www.asc-csa.gc.ca" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">CSA</a></li>
+                      <li><a href="https://www.isro.gov.in" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">ISRO</a></li>
+                    </ul>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-lg font-bold mb-4">Commercial Space</h3>
+                    <ul className="space-y-2">
+                      <li><a href="https://www.spacex.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">SpaceX</a></li>
+                      <li><a href="https://www.arianespace.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Ariane</a></li>
+                      <li><a href="https://www.blueorigin.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Blue Origin</a></li>
+                    </ul>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-lg font-bold mb-4">Astronomical Societies</h3>
+                    <ul className="space-y-2">
+                      <li><a href="https://a4e.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Astronomers for Planet Earth</a></li>
+                      <li><a href="https://astronomerswithoutborders.org/home" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Astronomers Without Borders</a></li>
+                      <li><a href="https://www.iau.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">International Astronomical Union</a></li>
+                      <li><a href="https://www.imo.net/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">International Meteor Organization</a></li>
+                      <li><a href="https://www.planetary.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">The Planetary Society</a></li>
+                      <li><a href="https://eas.unige.ch/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">European Astronomical Society</a></li>
+                      <li><a href="https://www.eaae-astronomy.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">European Association for Astronomy Education</a></li>
+                      <li><a href="https://en.wikipedia.org/wiki/List_of_astronomical_societies" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Wiki List of astronomical societies</a></li>
+                    </ul>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </main>
+            )}
+
+            {/* Calendar Tab */}
+            {activeTab === 'calendar' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Astronomical Calendar</h2>
+                <div className="flex flex-col lg:flex-row gap-8 w-full">
+                  <div className="bg-gray-800 rounded-lg p-6 flex-1 min-w-[320px]" style={{ maxWidth: 500, width: '100%' }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <button
+                        onClick={() => navigateCalendar('prev')}
+                        className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
+                      >
+                        ←
+                      </button>
+                      <h3 className="text-xl font-bold">
+                        {calendarDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                      </h3>
+                      <button
+                        onClick={() => navigateCalendar('next')}
+                        className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
+                      >
+                        →
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-2">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                        <div key={day} className="text-center font-bold p-2 text-gray-400">
+                          {day}
+                        </div>
+                      ))}
+                      {getDaysInMonth(calendarDate).map((day, index) => {
+                        const isToday = day === new Date().getDate() &&
+                          calendarDate.getMonth() === new Date().getMonth() &&
+                          calendarDate.getFullYear() === new Date().getFullYear();
+                        const hasObs = day && getObservationsForDay(calendarDate, day).length > 0;
+                        return (
+                          <div
+                            key={index}
+                            className={`text-center p-2 rounded cursor-pointer min-h-[40px] flex items-center justify-center ${
+                              day ? 'hover:bg-gray-700' : ''
+                            } ${
+                              isToday ? 'bg-blue-600 text-white' : ''
+                            } ${
+                              hasObs ? 'ring-2 ring-green-400' : ''
+                            } ${
+                              calendarSelectedDay === day ? 'bg-green-700 text-white' : ''
+                            }`}
+                            onClick={() => day && setCalendarSelectedDay(day)}
+                          >
+                            {day || ''}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Show observations for selected day */}
+                    {calendarSelectedDay && (
+                      <div className="mt-6">
+                        <h4 className="font-bold mb-2">Observations for {calendarDate.getFullYear()}-{(calendarDate.getMonth() + 1).toString().padStart(2, '0')}-{calendarSelectedDay.toString().padStart(2, '0')}</h4>
+                        {getObservationsForDay(calendarDate, calendarSelectedDay).length === 0 ? (
+                          <div className="text-gray-400">No observations for this day.</div>
+                        ) : (
+                          <ul className="space-y-2">
+                            {getObservationsForDay(calendarDate, calendarSelectedDay).map(obs => (
+                              <li
+                                key={obs.id}
+                                className="bg-gray-700 p-3 rounded cursor-pointer hover:ring-2 hover:ring-blue-400"
+                                onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}
+                              >
+                                <span className="font-bold text-blue-300">{obs.name}</span> ({obs.type})
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-full max-w-[500px] max-h-[700px] overflow-y-auto bg-[#181c23] rounded-xl p-4 flex-shrink-0">
+                    <EventList events={filteredEvents} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Settings Tab */}
+            {activeTab === 'settings' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Settings & Configuration</h2>
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <h3 className="text-lg font-bold mb-4">Data Management</h3>
+                  <div className="space-y-4 flex flex-col md:flex-row md:space-y-0 md:space-x-4">
+                    <button
+                      onClick={exportObservations}
+                      className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2"
+                    >
+                      <Download size={16} />
+                      <span>Export Observations</span>
+                    </button>
+                    <label className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded flex items-center space-x-2 cursor-pointer">
+                      <Upload size={16} />
+                      <span>Import Observations</span>
+                      <input
+                        type="file"
+                        accept="application/json"
+                        onChange={handleImport}
+                        className="hidden"
+                      />
+                    </label>
+                    <button className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded flex items-center space-x-2">
+                      <Save size={16} />
+                      <span>Download Backup</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
+        </div>
 
         {/* Add Observation Modal */}
         {showAddForm && (
