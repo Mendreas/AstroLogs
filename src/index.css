@@ -99,3 +99,61 @@ select.ios-input {
 .elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129 [style*="font-size: 10px"] {
   display: none !important;
 }
+
+/* Overlay vermelho escuro para modo noturno astronômico */
+.red-filter-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(40, 0, 0, 0.65); /* Menos opaco */
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Header vermelho escuro */
+.red-filter-header {
+  background-color: #1a0000 !important;
+}
+
+/* Botões em vermelho escuro */
+.red-filter-btn {
+  background-color: #3a0000 !important;
+  color: #ff6666 !important;
+  border-color: #a94442 !important;
+}
+.red-filter-btn:hover, .red-filter-btn:focus {
+  background-color: #a94442 !important;
+}
+
+/* Links em vermelho claro */
+.red-filter-link {
+  color: #ff4d4d !important;
+}
+
+/* Inputs e selects em vermelho escuro */
+.red-filter-input {
+  background-color: #2a0000 !important;
+  color: #ff6666 !important;
+  border-color: #a94442 !important;
+}
+
+/* Cards e caixas em vermelho escuro */
+.red-filter-card {
+  background-color: #1a0000 !important;
+  color: #ff6666 !important;
+  border-color: #a94442 !important;
+}
+
+/* Texto principal em vermelho claro */
+.red-filter-text, .red-filter-card * {
+  color: #ff4d4d !important;
+}
+
+/* Destaques verdes viram vermelhos claros */
+.red-filter-green {
+  background-color: #ff4d4d !important;
+  color: #1a0000 !important;
+  border-color: #ff4d4d !important;
+}

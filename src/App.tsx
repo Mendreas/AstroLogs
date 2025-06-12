@@ -652,14 +652,11 @@ const AstroObservationApp = () => {
   return (
     <div style={{ position: 'relative' }}>
       {redFilter && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-          background: 'rgba(255,0,0,0.25)', pointerEvents: 'none', zIndex: 9999
-        }} />
+        <div className="red-filter-overlay" />
       )}
-      <div className="min-h-screen bg-gray-900 text-white">
+      <div className={`min-h-screen${redFilter ? ' red-filter-text bg-[#1a0000]' : ' text-white bg-gray-900'}`}>
         {/* Header */}
-        <header className={`bg-gray-800 p-4 shadow-lg${redFilter ? ' bg-red-900' : ''}`} style={{ paddingLeft: '10px', paddingRight: '10px' }}>
+        <header className={`p-4 shadow-lg ${redFilter ? 'red-filter-header' : 'bg-gray-800'}`} style={{ paddingLeft: '10px', paddingRight: '10px' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="text-2xl">🔭</div>
@@ -669,15 +666,15 @@ const AstroObservationApp = () => {
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => setRedFilter(r => !r)}
-                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'red-filter-btn' : 'bg-blue-600 hover:bg-blue-700'}`}
                   title="Toggle red filter for night vision"
                   style={{ minWidth: 40, minHeight: 40 }}
                 >
-                  <span style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', background: 'red', border: redFilter ? '2px solid #fff' : '2px solid #fff' }}></span>
+                  <span style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', background: 'red', border: '2px solid #fff' }}></span>
                 </button>
                 <button
                   onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 transition-colors duration-200"
+                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'red-filter-btn' : 'bg-blue-600 hover:bg-blue-700'}`}
                   title="Add Observation"
                   style={{ minWidth: 40, minHeight: 40 }}
                 >
