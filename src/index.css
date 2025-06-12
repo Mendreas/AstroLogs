@@ -168,7 +168,8 @@ select.ios-input {
 }
 
 body .fixed-translate-widget,
-.fixed-translate-widget.elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129 {
+.fixed-translate-widget,
+.fixed-translate-widget > .elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129 {
   position: fixed !important;
   top: 16px !important;
   right: 24px !important;
@@ -179,4 +180,5 @@ body .fixed-translate-widget,
   width: auto !important;
   min-width: 0 !important;
   max-width: none !important;
+  pointer-events: auto !important;
 }

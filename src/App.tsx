@@ -5,6 +5,8 @@ import EventList from "./components/EventList";
 import eventsData from "./data/events.json";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import SolarSystemAnimation from './SolarSystemAnimation';
+import { animate } from 'animejs';
 
 function moonPhaseName(phase: number) {
   if (phase < 0.03 || phase > 0.97) return "New Moon";
@@ -665,9 +667,32 @@ const AstroObservationApp = () => {
     return () => window.removeEventListener('resize', fixWidget);
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const el = document.querySelector('.fixed-translate-widget');
+      if (el) {
+        el.setAttribute(
+          'style',
+          'position:fixed !important; top:16px !important; right:24px !important; left:auto !important; z-index:10010 !important; background:transparent !important; margin:0 !important; width:auto !important; min-width:0 !important; max-width:none !important; pointer-events:auto !important;'
+        );
+      }
+      const inner = document.querySelector('.fixed-translate-widget > .elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129');
+      if (inner) {
+        (inner as HTMLElement).style.position = 'static';
+        (inner as HTMLElement).style.margin = '0';
+        (inner as HTMLElement).style.background = 'transparent';
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
+      {/* Widget de tradução fixo no topo direito */}
+      <div className="fixed-translate-widget" style={{ position: 'fixed', top: 16, right: 24, zIndex: 10010, background: 'transparent' }}>
+        <div className="elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129" data-elfsight-app-lazy></div>
+      </div>
       {redFilter && (
         <div className="red-filter-overlay" />
       )}
@@ -700,7 +725,6 @@ const AstroObservationApp = () => {
                   </button>
                 </div>
               </div>
-              <div className="elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129 fixed-translate-widget" data-elfsight-app-lazy style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', height: '40px' }}></div>
             </div>
           </header>
           <nav className={`border-t border-gray-700 ${redFilter ? '' : ''}`} style={{ paddingLeft: '10px', paddingRight: '10px' }}>
@@ -711,6 +735,7 @@ const AstroObservationApp = () => {
                 { id: 'resources', label: 'Resources', icon: '📚' },
                 { id: 'links', label: 'Useful Links', icon: '🔗' },
                 { id: 'calendar', label: 'Calendar', icon: '📅' },
+                { id: 'solar', label: 'Solar System', icon: '🪐' },
                 { id: 'settings', label: 'Settings', icon: '⚙️' }
               ].map(tab => (
                 <button
@@ -975,6 +1000,17 @@ const AstroObservationApp = () => {
                     Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener">MoonGiant.com</a>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Solar System Tab */}
+            {activeTab === 'solar' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold mb-4 flex items-center">
+                  <span className="mr-2">🪐</span>
+                  Solar System Animation
+                </h2>
+                <SolarSystemAnimation />
               </div>
             )}
 
