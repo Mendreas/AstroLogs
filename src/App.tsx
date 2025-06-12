@@ -633,6 +633,21 @@ const AstroObservationApp = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const widget = document.querySelector('.elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129');
+      if (widget) {
+        const spans = widget.querySelectorAll('span, div');
+        spans.forEach(el => {
+          if (el.textContent && el.textContent.includes('Free Website Translator Widget')) {
+            (el as HTMLElement).style.display = 'none';
+          }
+        });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
@@ -650,22 +665,25 @@ const AstroObservationApp = () => {
               <div className="text-2xl">🔭</div>
               <h1 className="text-2xl font-bold">AstroLog</h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setRedFilter(r => !r)}
-                className={`px-4 py-2 rounded ${redFilter ? 'bg-red-700 text-white' : 'bg-gray-700 text-red-300'} font-bold`}
-                title="Toggle red filter for night vision"
-              >
-                {redFilter ? 'Red Filter: ON' : 'Red Filter: OFF'}
-              </button>
-              <button
-                onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center space-x-2"
-              >
-                <Plus size={20} />
-                <span>Add</span>
-              </button>
+            <div className="flex-1 flex justify-center">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setRedFilter(r => !r)}
+                  className={`px-4 py-2 rounded ${redFilter ? 'bg-red-700 text-white' : 'bg-gray-700 text-red-300'} font-bold`}
+                  title="Toggle red filter for night vision"
+                >
+                  {redFilter ? 'Red Filter: ON' : 'Red Filter: OFF'}
+                </button>
+                <button
+                  onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
+                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg flex items-center space-x-2"
+                >
+                  <Plus size={20} />
+                  <span>Add</span>
+                </button>
+              </div>
             </div>
+            <div className="elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129" data-elfsight-app-lazy style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', height: '40px' }}></div>
           </div>
         </header>
 
@@ -993,6 +1011,7 @@ const AstroObservationApp = () => {
                           alt={obs.name}
                           className="w-full h-32 object-cover rounded-lg hover:opacity-80 cursor-pointer"
                           onClick={() => handleImageClick(obs.image)}
+                          onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                         />
                       </div>
                     )}
@@ -1432,7 +1451,7 @@ const AstroObservationApp = () => {
                       alt="Observation"
                       className="max-h-48 rounded border border-gray-600"
                       style={{ maxWidth: "100%" }}
-                      onError={e => (e.currentTarget.style.display = "none")}
+                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                     />
                   </div>
                 )}
@@ -1502,6 +1521,7 @@ const AstroObservationApp = () => {
                       alt={selectedObservation.name}
                       className="w-full h-48 object-cover rounded-lg hover:opacity-80 cursor-pointer"
                       onClick={() => handleImageClick(selectedObservation.image)}
+                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                     />
                   </div>
                 )}

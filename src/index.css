@@ -94,3 +94,8 @@ select.ios-input {
   -webkit-overflow-scrolling: touch;
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Esconde o texto promocional do Elfsight Translator */
+.elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129 [style*="font-size: 10px"] {
+  display: none !important;
+}
