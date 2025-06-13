@@ -1432,7 +1432,7 @@ const AstroObservationApp = () => {
                       </div>
                     )}
                   </div>
-                  <div className="w-full max-w-[500px] max-h-[700px] overflow-y-auto bg-[#181c23] rounded-xl p-4 flex-shrink-0">
+                  <div className="w-full max-w-[500px] max-h-[700px] overflow-y-auto bg-[#181c23] rounded-xl pt-0 pr-4 pb-4 pl-4 flex-shrink-0">
                     {eventsLoading ? (
                       <div className="text-gray-400">Loading events...</div>
                     ) : (

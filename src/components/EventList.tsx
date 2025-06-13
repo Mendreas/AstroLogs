@@ -23,15 +23,24 @@ const EventList: React.FC<EventListProps> = ({ events }) => {
   );
 
   return (
-    <div style={{ maxWidth: 600, margin: "0 auto" }}>
-      <input
-        type="text"
-        placeholder="Search events..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        style={{ width: "100%", marginBottom: 16, padding: 8, borderRadius: 6, border: "1px solid #444", background: "#181c23", color: "#fff" }}
-      />
-      {filtered.map(event => (
+    <div style={{ maxWidth: 600, margin: "0 auto", position: 'relative' }}>
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+        background: '#181c23',
+        width: '100%',
+        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.15)'
+      }}>
+        <input
+          type="text"
+          placeholder="Search events..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ width: "100%", marginBottom: 8, padding: 8, borderRadius: 6, border: "1px solid #444", background: "#181c23", color: "#fff" }}
+        />
+      </div>
+      {filtered.map((event, idx) => (
         <EventCard
           key={event.id}
           event={event}
