@@ -1012,20 +1012,23 @@ const AstroObservationApp = () => {
                 </h2>
                 <div className="bg-gray-800 rounded-lg p-6">
                   <iframe 
+                    src="https://www.solarsystemscope.com/iframe" 
+                    width="100%" 
                     height="600" 
-                    style={{width: "100%"}} 
-                    scrolling="no" 
-                    title="CSS 3D Solar System" 
-                    src="https://codepen.io/juliangarnier/embed/krNqZO?default-tab=result" 
-                    frameBorder="no" 
-                    loading="lazy" 
-                    allowTransparency={true} 
-                    allowFullScreen={true}
-                  >
-                    See the Pen <a href="https://codepen.io/juliangarnier/pen/krNqZO">
-                    CSS 3D Solar System</a> by Julian Garnier (<a href="https://codepen.io/juliangarnier">@juliangarnier</a>)
-                    on <a href="https://codepen.io">CodePen</a>.
-                  </iframe>
+                    style={{
+                      minWidth: "500px",
+                      minHeight: "400px",
+                      border: "2px solid #0f5c6e",
+                      borderRadius: "8px",
+                      backgroundColor: "transparent"
+                    }}
+                    title="Solar System Scope"
+                    frameBorder="0"
+                    allowFullScreen
+                  />
+                  <div className="text-xs text-gray-400 mt-2">
+                    Fonte: <a href="https://www.solarsystemscope.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Solar System Scope</a>
+                  </div>
                 </div>
               </div>
             )}
@@ -1063,7 +1066,7 @@ const AstroObservationApp = () => {
                   {filteredObservations.map(obs => (
                     <div
                       key={obs.id}
-                      className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:ring-2 hover:ring-blue-400"
+                      className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:ring-2 hover:ring-blue-400 border border-gray-700"
                       onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}
                     >
                       <div className="flex items-start justify-between mb-2">
