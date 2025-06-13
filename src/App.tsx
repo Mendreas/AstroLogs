@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, MapPin, Search, Plus, Star, Filter, Settings, Download, Upload, Save, X, Eye, Moon, Sun, Edit } from 'lucide-react';
 import { Body, Observer, Equator, Horizon, MoonPhase } from "astronomy-engine";
 import EventList from "./components/EventList";
-import eventsData from "./data/events.json";
+import { EventType } from "./components/EventCard";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import SolarSystemAnimation from './SolarSystemAnimation';
@@ -47,14 +47,6 @@ interface CelestialObject {
   season: string;
   bestTime: string;
 }
-
-type EventType = {
-  id: string;
-  name: string;
-  date: string;
-  description: string;
-  imageName: string;
-};
 
 const fetchBortleClass = async (lat: number, lon: number): Promise<string> => {
   try {
@@ -128,6 +120,7 @@ const AstroObservationApp = () => {
   const [visibleObjectsNow, setVisibleObjectsNow] = useState<any[]>([]);
   const [searchText, setSearchText] = useState("");
   const [events, setEvents] = useState<EventType[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [isIphone, setIsIphone] = useState(false);
 
   // Exemplo de exoplanetas famosos
@@ -620,9 +613,119 @@ const AstroObservationApp = () => {
     localStorage.setItem("observations", JSON.stringify(observations));
   }, [observations]);
 
-  useEffect(() => {
-    setEvents(eventsData);
+  // Helper to parse AstroEvents.txt and events list.txt
+  const parseEvents = useCallback(async (currentTime: Date) => {
+    // Fetch both files
+    const [astroEventsText, eventsListText] = await Promise.all([
+      fetch('/AstroLogs/AstroEvents.txt').then(r => r.text()),
+      fetch('/AstroLogs/events list.txt').then(r => r.text())
+    ]);
+
+    // Parse events list.txt into a map: name (lowercase) -> description
+    const eventDescMap: Record<string, string> = {};
+    const lines = eventsListText.split(/\r?\n/);
+    let currentTitle = '';
+    let currentDesc: string[] = [];
+    for (const line of lines) {
+      if (line.trim() === '') continue;
+      if (/^[A-Za-z0-9\- ]+$/.test(line.trim())) {
+        if (currentTitle) {
+          eventDescMap[currentTitle.toLowerCase()] = currentDesc.join('\n').trim();
+        }
+        currentTitle = line.trim();
+        currentDesc = [];
+      } else {
+        currentDesc.push(line);
+      }
+    }
+    if (currentTitle) {
+      eventDescMap[currentTitle.toLowerCase()] = currentDesc.join('\n').trim();
+    }
+
+    // Parse AstroEvents.txt
+    const eventList: EventType[] = [];
+    let currentYear = '';
+    let currentMonth = '';
+    const monthMap: { [key: string]: string } = {
+      January: '01', February: '02', March: '03', April: '04', May: '05', June: '06',
+      July: '07', August: '08', September: '09', October: '10', November: '11', December: '12'
+    };
+    const astroLines = astroEventsText.split(/\r?\n/);
+    for (let i = 0; i < astroLines.length; i++) {
+      const line = astroLines[i].trim();
+      if (/^\d{4}/.test(line)) {
+        currentYear = line.match(/\d{4}/)?.[0] || '';
+        continue;
+      }
+      if (Object.keys(monthMap).includes(line)) {
+        currentMonth = line;
+        continue;
+      }
+      // Event line: e.g. "January 13, 22:27 UTC – Full Moon (Wolf Moon)"
+      if (/^(January|February|March|April|May|June|July|August|September|October|November|December)/.test(line)) {
+        // Extract day(s), name
+        const match = line.match(/^(\w+)\s+(\d{1,2}(?:–\d{1,2})?)(?:,?\s*([\d: UTC-]+))?\s*[–-]\s*(.+)$/);
+        if (match) {
+          const [, month, day, , nameRaw] = match;
+          let name = nameRaw.split(':')[0].trim();
+          let eventId = `${currentYear}-${monthMap[month]}-${day.split('–')[0].padStart(2, '0')}-${name}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+          // Compose date (use first day if range)
+          const dateStr = `${currentYear}-${monthMap[month]}-${day.split('–')[0].padStart(2, '0')}`;
+          // Image logic
+          let imageName = '';
+          const moonMatch = name.match(/Full Moon \(([^)]+)\)/i);
+          if (moonMatch) {
+            imageName = `${moonMatch[1].toLowerCase().replace(/ /g, '-')}.jpg`;
+          } else if (/Full Moon/i.test(name)) {
+            imageName = 'full-moon.jpg';
+          } else {
+            imageName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') + '.jpg';
+          }
+          // Description
+          let descKey = name.toLowerCase().replace(/\(.+\)/, '').trim();
+          let description = eventDescMap[descKey] || 'No data available.';
+          let fullDescription = eventDescMap[descKey] ? eventDescMap[descKey] : 'No data available.';
+          eventList.push({
+            id: eventId,
+            name,
+            date: dateStr,
+            description: description.split('\n')[0],
+            imageName,
+            fullDescription
+          });
+        }
+      }
+    }
+    // Sort chronologically
+    eventList.sort((a, b) => a.date.localeCompare(b.date));
+    return eventList;
   }, []);
+
+  // Load and filter events
+  useEffect(() => {
+    setEventsLoading(true);
+    parseEvents(currentTime).then(allEvents => {
+      console.log("Total events parsed:", allEvents.length);
+      // Filter by year logic
+      const now = currentTime;
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      let filtered: EventType[] = [];
+      if (month === 12) {
+        // December: show all events from this year and next year
+        filtered = allEvents.filter(ev => {
+          const evYear = parseInt(ev.date.split('-')[0]);
+          return evYear === year || evYear === year + 1;
+        });
+      } else {
+        filtered = allEvents.filter(ev => parseInt(ev.date.split('-')[0]) === year);
+      }
+      // Remove past events
+      filtered = filtered.filter(ev => new Date(ev.date) >= now);
+      setEvents(filtered);
+      setEventsLoading(false);
+    });
+  }, [currentTime, parseEvents]);
 
   const filteredEvents = events.filter(event =>
     event.name.toLowerCase().includes(searchText.toLowerCase())
@@ -1330,7 +1433,11 @@ const AstroObservationApp = () => {
                     )}
                   </div>
                   <div className="w-full max-w-[500px] max-h-[700px] overflow-y-auto bg-[#181c23] rounded-xl p-4 flex-shrink-0">
-                    <EventList events={filteredEvents} />
+                    {eventsLoading ? (
+                      <div className="text-gray-400">Loading events...</div>
+                    ) : (
+                      <EventList events={events} />
+                    )}
                   </div>
                 </div>
               </div>
