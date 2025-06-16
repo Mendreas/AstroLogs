@@ -618,7 +618,7 @@ const AstroObservationApp = () => {
     // Fetch both files
     const [astroEventsText, eventsListText] = await Promise.all([
       fetch('/AstroLogs/AstroEvents.txt').then(r => r.text()),
-      fetch('/AstroLogs/events list.txt').then(r => r.text())
+      fetch(`${process.env.PUBLIC_URL}/events-list.txt`).then(r => r.text())
     ]);
 
     // Parse events list.txt into a map: name (lowercase) -> description
