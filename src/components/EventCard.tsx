@@ -99,7 +99,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, expanded, onExpand }) => {
           <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12 }} onClick={e => e.stopPropagation()}>
             {/* Calendar icon */}
             <span style={{ display: 'flex', alignItems: 'center', fontSize: 22, color: '#0f5c6e' }} title="Add to calendar">
-              <img src="/AstroLogs/images/icons/calendar-generic.png" alt="Calendar" width={24} height={24} style={{ display: 'block' }} />
+              <img src={`${process.env.PUBLIC_URL}/images/icons/calendar-generic.png`} alt="Calendar" width={24} height={24} style={{ display: 'block' }} />
             </span>
             {/* Apple button */}
             <button
@@ -107,7 +107,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, expanded, onExpand }) => {
               style={{ background: '#fff', border: '1px solid #ccc', borderRadius: 6, padding: 6, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
               title="Add to Apple Calendar (.ics)"
             >
-              <img src="/AstroLogs/images/icons/apple.png" alt="Apple Calendar" width={24} height={24} />
+              <img src={`${process.env.PUBLIC_URL}/images/icons/apple.png`} alt="Apple Calendar" width={24} height={24} />
             </button>
             {/* Outlook button */}
             <button
@@ -115,7 +115,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, expanded, onExpand }) => {
               style={{ background: '#fff', border: '1px solid #ccc', borderRadius: 6, padding: 6, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
               title="Add to Outlook (.ics)"
             >
-              <img src="/AstroLogs/images/icons/outlook.png" alt="Outlook" width={24} height={24} />
+              <img src={`${process.env.PUBLIC_URL}/images/icons/outlook.png`} alt="Outlook" width={24} height={24} />
             </button>
             {/* Google button */}
             <a
@@ -126,7 +126,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, expanded, onExpand }) => {
               title="Add to Google Calendar"
               onClick={e => e.stopPropagation()}
             >
-              <img src="/AstroLogs/images/icons/google-calendar.png" alt="Google Calendar" width={24} height={24} />
+              <img src={`${process.env.PUBLIC_URL}/images/icons/google-calendar.png`} alt="Google Calendar" width={24} height={24} />
             </a>
           </div>
         )}
