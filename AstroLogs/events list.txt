@@ -14,7 +14,7 @@ The astronomical new moon occurs by definition at the moment of conjunction in e
 
 A lunation, or synodic month, is the period from one new moon to the next. At the J2000.0 epoch, the average length of a lunation is 29.53059 days (or 29 days, 12 hours, 44 minutes, and 3 seconds). However, the length of any one synodic month can vary from 29.26 to 29.80 days (12.96 hours) due to the perturbing effects of the Sun's gravity on the Moon's eccentric orbit.
 
-The Southern Delta Aquariids Meteor Shower
+Southern Delta Aquariids Meteor Shower
 The Southern Delta Aquariids are a meteor shower visible from mid July to mid August each year with peak activity on 28 or 29 July.
 
 The comet of origin is not known with certainty. A suspected candidate is Comet 96P Machholz. Earlier, it was thought to have originated from the Marsden and Kracht Sungrazing comets.
@@ -59,28 +59,28 @@ Unlike a solar eclipse, which can only be viewed from a relatively small area of
 
 The symbol for a lunar eclipse (or any body in the shadow of another) is 🝶 (U+1F776).
 
-Draconids Meteor Shower Peak
+Draconids Meteor Shower
 A meteor shower is a celestial event in which a number of meteors are observed to radiate, or originate, from one point in the night sky.
 
 The October Draconids, in the past also unofficially known as the Giacobinids, are a Northern hemisphere meteor shower whose parent body is the periodic comet 21P/Giacobini-Zinner. They are named after the constellation Draco, where they seemingly come from. Almost all meteors which fall towards Earth ablate long before reaching its surface. The Draconids are best viewed after sunset in an area with a clear dark sky.
 
 The 1933 and 1946 Draconids had zenithal hourly rates of thousands of meteors visible per hour, among the most impressive meteor storms of the 20th century. Rare outbursts in activity can occur when the Earth travels through a denser part of the cometary debris stream; for example, in 1998, rates suddenly spiked[5][6] but only increased modestly in 2005. A Draconid meteor outburst occurred as expected on October 8, 2011, though a waxing gibbous Moon reduced the number of meteors observed visually. During the 2012 shower radar observations (which detect smaller and fainter meteors) detected up to 1000 meteors per hour. The 2012 outburst may have been caused by the narrow trail of dust and debris left behind by the parent comet in 1959.
 
-Orionids Meteor Shower Peak
+Orionids Meteor Shower
 A meteor shower is a celestial event in which a number of meteors are observed to radiate, or originate, from one point in the night sky.
 
 The Orionids meteor shower, often shortened to the Orionids, is one of two meteor showers associated with Halley's Comet. The Orionids are so-called because the point they appear to come from, called the radiant, lies in the constellation Orion, but they can be seen over a large area of the sky. The Orionids are an annual meteor shower which last approximately one week in late October. In some years, meteors may occur at rates of 50–70 per hour.
 
 Orionid outbursts occurred in 585, 930, 1436, 1439, 1465, and 1623. The Orionids occur at the ascending node of Halley's comet. The ascending node reached its closest distance to Earth around 800 BCE. Currently Earth approaches Halley's orbit at a distance of 0.154 AU (23.0 million km; 14.3 million mi; 60 LD) during the Orionids. The next outburst might be in 2070 as a result of particles trapped in a 2:13 MMR with Jupiter.
 
-Taurids Meteor Shower Peak
+Northern Taurids Meteor Shower
 A meteor shower is a celestial event in which a number of meteors are observed to radiate, or originate, from one point in the night sky.
 
 The Taurids are an annual meteor shower, associated with the comet Encke. The Taurids are actually two separate showers, with a Southern and a Northern component. The Southern Taurids originated from Comet Encke, while the Northern Taurids originated from the asteroid 2004 TG10, possibly a large fragment of Encke due to its similar orbital parameters. They are named after their radiant point in the constellation Taurus, where they are seen to come from in the sky. Because of their occurrence in late October and early November, they are also called Halloween fireballs. Since 2P/Encke is such a short period comet, the meteors have the slowest impact speed of the annual well-known meteor showers.
 
 Comet Encke and the Taurid complex are believed to be remnants of a disrupted 40-km-class comet from about 10,000 years ago, breaking into several pieces and releasing material by normal cometary activity, mass loss via YORP spin-up, or occasionally by close encounters with the tidal force of Earth or other planets (Whipple, 1940; Klačka, 1999). In total, this meteoroid stream is the largest in the inner Solar System. Since the stream is rather spread out in space, Earth takes several weeks to pass through it, causing an extended period of meteor activity, compared with the much smaller periods of activity in other showers. The Taurids are also made up of weightier material, pebbles instead of dust grains. The daytime showers are active from May to July (Beta Taurids and Zeta Perseids), while the nighttime showers are active from September to December.
 
-Leonids Meteor Shower Peak
+Leonids Meteor Shower
 A meteor shower is a celestial event in which a number of meteors are observed to radiate, or originate, from one point in the night sky.
 
 The Leonids (/ˈliːənɪdz/ LEE-ə-nidz) are a prolific annual meteor shower associated with the comet Tempel–Tuttle, and are also known for their spectacular meteor storms that occur about every 33 years. The Leonids get their name from the location of their radiant in the constellation Leo: the meteors appear to radiate from that point in the sky. The name is derived from Greek and Latin with the prefix Leo- referring to the constellation and the suffix -ids signifying that the meteor shower is the offspring of, descendent of, the constellation Leo.
@@ -91,7 +91,7 @@ The meteoroids left by the comet are organized in trails in orbits similar to �
 
 The Leonids also produce meteor storms (very large outbursts) about every 33 years, during which activity exceeds 1,000 meteors per hour, with some events exceeding 100,000 meteors per hour, in contrast to the sporadic background (5 to 8 meteors per hour) and the shower background (several meteors per hour).
 
-Geminids Meteor Shower Peak
+Geminids Meteor Shower
 A meteor shower is a celestial event in which a number of meteors are observed to radiate, or originate, from one point in the night sky.
 
 The Geminids are a prolific meteor shower with 3200 Phaethon (which is thought to be an Apollo asteroid with a "rock comet" orbit.) being the parent body. Because of this, it would make this shower, along with the Quadrantids, the only major meteor showers not originating from a comet. The meteors from this shower are slow, they can be seen in December and usually peak around December 4–16, with the date of highest intensity being the morning of December 14. Current showers produce up to 120–160 meteors per hour under optimal conditions, peaking around 2:00 or 3:00. Geminids were first observed in 1862, much later than other showers such as the Perseids (36 AD) and Leonids (902 AD).
@@ -109,7 +109,7 @@ The winter solstice occurs during the hemisphere's winter. In the Northern Hemis
 
 Since prehistory, the winter solstice has been a significant time of year in many cultures and has been marked by festivals and rites. This is because it is the point when the shortening of daylight hours is reversed and the daytime begins to lengthen again. In parts of Europe it was seen as the symbolic death and rebirth of the Sun. Some ancient monuments such as Newgrange, Stonehenge, and Cahokia Woodhenge are aligned with the sunrise or sunset on the winter solstice.
 
-Ursids Meteor Shower Peak
+Ursids Meteor Shower
 A meteor shower is a celestial event in which a number of meteors are observed to radiate, or originate, from one point in the night sky.
 
 The Ursid (URS) meteor activity begins annually around December 17 and runs for over a week, until the 25th or 26th. This meteor shower is named for its radiant point, which is located near the star Beta Ursae Minoris (Kochab) in the constellation Ursa Minor.
