@@ -1,46 +1,5 @@
 2025 events
 
-January
-JFull Moon
-The full moon will be visible all night.
-
-January 13, 22:27 UTC – Full Moon (Wolf Moon)
-
-January 16 – Mars Opposition
-
-January 18 – Saturn–Venus Conjunction
-
-February
-February 12, 13:53 UTC – Full Moon
-
-March
-
-March 13 – Total Lunar Eclipse (Blood Moon)
-
-March 14, 06:55 UTC – Full Moon during lunar eclipse
-
-March 17 – Lunar Apogee
-
-March 20 – Vernal (Spring) Equinox
-
-March 29 – Partial Solar Eclipse (visible from parts of Europe, including Portugal)
-
-March 29, 10:58 UTC – New Moon during the eclipse
-
-April
-April 21–22 – Lyrids Meteor Shower
-
-April 27, 19:31 UTC – New Moon
-
-May
-May 3–4 – Eta Aquarids Meteor Shower
-
-May 4, 13:52 UTC – Full Moon (Flower Moon)
-
-May 12, 16:56 UTC – Full Moon
-
-May 26 – New Moon
-
 June
 June 3, 03:41 UTC – Full Moon
 
@@ -133,7 +92,7 @@ Example: A moderate G2–G3 geomagnetic storm is forecast for June 14–15, 2025
 2026 events
 
 January
-January 3–4 – Quadrantids Meteor Shower (peak): up to ~120 meteors/hour
+January 3–4 – Quadrantids Meteor Shower
 
 January 7, 23:23 UTC – New Moon
 
@@ -144,7 +103,7 @@ February 6, 11:02 UTC – New Moon
 
 February 15 – Saturn–Neptune Conjunction
 
-February 17 – Annular Solar Eclipse (not visible in Portugal; over Antarctica)
+February 17 – Annular Solar Eclipse
 
 February 22, 18:30 UTC – Full Moon (Snow Moon)
 
@@ -153,23 +112,23 @@ February 26 – Venus–Mercury Conjunction
 February 27 – Moon–Jupiter Conjunction
 
 March
-March 3, 11:33 UTC – Total Lunar Eclipse (Blood Moon), fully visible from Portugal
+March 3, 11:33 UTC – Total Lunar Eclipse (Blood Moon)
 
 March 6, 23:09 UTC – New Moon
 
-March 20 – Vernal (Spring) Equinox
+March 20 – Vernal Equinox
 
 March 21, 05:00 UTC – Full Moon
 
 April
 April 5, 14:15 UTC – New Moon
 
-April 21 – Lyrids Meteor Shower (peak)
+April 21 – Lyrids Meteor Shower
 
 April 21, 20:24 UTC – Full Moon (Pink Moon)
 
 May
-May 5–6 – Eta Aquarids Meteor Shower (peak)
+May 5–6 – Eta Aquarids Meteor Shower
 
 May 5, 03:52 UTC – New Moon
 
@@ -187,18 +146,18 @@ July 3, 12:42 UTC – New Moon
 
 July 19, 22:39 UTC – Full Moon (Buck Moon, possible Supermoon)
 
-July 28–30 – Southern Delta Aquarids Meteor Shower (peak)
+July 28–30 – Southern Delta Aquarids Meteor Shower
 
 August
 August 2, 01:13 UTC – New Moon
 
-August 12 – Total Solar Eclipse (partial in Portugal, totality near NE Spain/Atlantic)
+August 12 – Total Solar Eclipse
 
-August 12–13 – Perseids Meteor Shower (peak)
+August 12–13 – Perseids Meteor Shower
 
 August 20, 13:29 UTC – Full Moon (Sturgeon Moon, Supermoon, partial lunar eclipse Aug 28)
 
-August 28, 04:12 UTC – Partial Lunar Eclipse (peak), visible from Portugal
+August 28, 04:12 UTC – Partial Lunar Eclipse
 
 September
 September 1, 13:13 UTC – New Moon
@@ -210,29 +169,29 @@ September 22 – Autumn Equinox
 October
 October 1, 19:53 UTC – New Moon
 
-October 7–8 – Draconids Meteor Shower (peak)
+October 7–8 – Draconids Meteor Shower
 
 October 17, 13:14 UTC – Full Moon (Hunter’s Moon, Supermoon)
 
-October 22 – Orionids Meteor Shower (peak)
+October 22 – Orionids Meteor Shower
 
 November
 November 1, 04:47 UTC – New Moon
 
 November 15, 21:28 UTC – Full Moon (Beaver Moon)
 
-November 16–17 – Leonids Meteor Shower (peak)
+November 16–17 – Leonids Meteor Shower
 
 December
 December 1, 17:22 UTC – New Moon
 
-December 13–14 – Geminids Meteor Shower (peak)
+December 13–14 – Geminids Meteor Shower
 
 December 15, 09:02 UTC – Full Moon (Cold Moon)
 
 December 21 – Winter Solstice
 
-December 22–23 – Ursids Meteor Shower (peak)
+December 22–23 – Ursids Meteor Shower
 
 🚀 Notable Space Launches & Missions
 Apr 2026 – NASA Artemis II: First crewed Orion/SLS mission—10‑day lunar flyby 
