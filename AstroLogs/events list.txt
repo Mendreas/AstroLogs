@@ -5,6 +5,22 @@ The full moon is the lunar phase when the Moon appears fully illuminated from Ea
 
 The time interval between a full moon and the next repetition of the same phase, a synodic month, averages about 29.53 days. Because of irregularities in the moon's orbit, the new and full moons may fall up to thirteen hours either side of their mean. If the calendar date is not locally determined through observation of the new moon at the beginning of the month there is the potential for a further twelve hours difference depending on the time zone. Potential discrepancies also arise from whether the calendar day is considered to begin in the evening or at midnight. It is normal for the full moon to fall on the fourteenth or the fifteenth of the month according to whether the start of the month is reckoned from the appearance of the new moon or from the conjunction.
 
+New Moon
+New moon is the first lunar phase, when the Moon and Sun have the same ecliptic longitude.
+
+The original meaning of the term 'new moon', which is still sometimes used in calendrical, non-astronomical contexts, is the first visible crescent of the Moon after conjunction with the Sun. This thin waxing crescent is briefly and faintly visible as the Moon gets lower in the western sky after sunset. The precise time and even the date of the appearance of the new moon by this definition will be influenced by the geographical location of the observer. The first crescent marks the beginning of the month in the Islamic calendar and in some lunisolar calendars such as the Hebrew calendar. In the Chinese calendar, the beginning of the month is marked by the last visible crescent of a waning Moon.
+
+The astronomical new moon occurs by definition at the moment of conjunction in ecliptical longitude with the Sun when the Moon is invisible from the Earth. This moment is unique and does not depend on location, and in certain circumstances, it coincides with a solar eclipse.
+
+A lunation, or synodic month, is the period from one new moon to the next. At the J2000.0 epoch, the average length of a lunation is 29.53059 days (or 29 days, 12 hours, 44 minutes, and 3 seconds). However, the length of any one synodic month can vary from 29.26 to 29.80 days (12.96 hours) due to the perturbing effects of the Sun's gravity on the Moon's eccentric orbit.
+
+The Southern Delta Aquariids Meteor Shower
+The Southern Delta Aquariids are a meteor shower visible from mid July to mid August each year with peak activity on 28 or 29 July.
+
+The comet of origin is not known with certainty. A suspected candidate is Comet 96P Machholz. Earlier, it was thought to have originated from the Marsden and Kracht Sungrazing comets.
+
+The Delta Aquariids get their name because their radiant appears to lie in the constellation Aquarius, near one of the constellation's brightest stars, Delta Aquarii. The name derives from the Latin possessive form "Aquarii", whereby the declension "-i" is replaced by "-ids" (hence Aquariids with two i's). There are two branches of the Delta Aquariid meteor shower, Southern and Northern. The Southern Delta Aquariids are considered a strong shower, with an average meteor observation rate of 15–20 per hour, and a peak zenithal hourly rate of 18. The average radiant is at RA=339°, DEC=−17°. The Northern Delta Aquariids are a weaker shower, peaking later in mid August, with an average peak rate of 10 meteors per hour and an average radiant of RA=340°, DEC=−2°.
+
 Summer Solstice
 A solstice is the time when the Sun reaches its most northerly or southerly excursion relative to the celestial equator on the celestial sphere. Two solstices occur annually.
 
@@ -17,7 +33,7 @@ A meteor shower is a celestial event in which a number of meteors are observed t
 
 Alpha Capricornids is a meteor shower that takes place as early as 7 July and continues until around 15 August.[2] The meteor shower was discovered by Hungarian astronomer Miklos von Konkoly-Thege in 1871.[3] This shower has infrequent but relatively bright meteors, with some fireballs. Parent body is comet 169P/NEAT.
 
-Perseid Meteor Shower Peak
+Perseids Meteor Shower
 A meteor shower is a celestial event in which a number of meteors are observed to radiate, or originate, from one point in the night sky.
 
 The Perseids are a prolific meteor shower associated with the comet Swift–Tuttle that are usually visible from mid-July to late-August. The meteors are called the Perseids because they appear from the general direction of the constellation Perseus and in more modern times have a radiant bordering on Cassiopeia and Camelopardalis.
@@ -184,3 +200,50 @@ Saturn can be seen with the naked eye as a bright star, but a telescope or stron
 
 Other benefits?
 During opposition, the rings of Saturn are often at their brightest, and you can also see some of its moons. 
+
+Mercury at Greatest Eastern Elongation
+In astronomy, a planet's elongation is the angular separation between the Sun and the planet, with Earth as the reference point. The greatest elongation is the maximum angular separation. Astronomical tables and websites, such as Heavens-Above, forecast when and where the planets reach their next maximum elongations.
+
+Mercury reaches its greatest eastern elongation, meaning its farthest from the sun in the evening sky, on July 4, 2025. At this point, Mercury will be 26 degrees from the sun in the western sky after sunset, making it a good evening apparition, particularly for Southern Hemisphere observers. 
+Elongation Explained:
+Greatest Elongation:
+This occurs when a planet (like Mercury or Venus) is as far away as it can be from the sun in the sky, as seen from Earth. 
+Eastern Elongation:
+The planet is visible in the evening sky after sunset, as it travels west from the sun. 
+Western Elongation:
+The planet is visible in the morning sky before sunrise, as it travels east from the sun. 
+Conjunction:
+When a planet is in alignment with the sun, either before (inferior conjunction) or behind (superior conjunction). 
+
+Mercury at Greatest Western Elongation
+In astronomy, a planet's elongation is the angular separation between the Sun and the planet, with Earth as the reference point. The greatest elongation is the maximum angular separation. Astronomical tables and websites, such as Heavens-Above, forecast when and where the planets reach their next maximum elongations.
+
+Mercury's "greatest western elongation" occurs when it reaches its furthest point west of the Sun, as viewed from Earth, before sunrise. During this time, Mercury is visible as a morning object, appearing in the eastern sky before the Sun rises. This is when Mercury is easiest to spot because it's positioned farthest away from the Sun's glare. 
+Key points about Mercury's greatest western elongation:
+Visibility:
+Mercury is visible as a morning object, meaning it's in the eastern sky before sunrise. 
+Position:
+It's located at its maximum distance west of the Sun, as viewed from Earth. 
+Observational ease:
+This elongation offers the best opportunity to see Mercury, as it's furthest from the Sun's bright light. 
+Angular separation:
+The maximum angular separation of Mercury from the Sun during elongation is between 18 and 28 degrees. 
+Timing:
+The exact date of greatest western elongation varies, but it typically occurs during the spring and autumn. 
+
+Total Lunar Eclipse
+A lunar eclipse is an astronomical event that occurs when the Moon moves into the Earth's shadow, causing the Moon to be darkened.
+
+When the Moon's near side entirely passes into the Earth's umbral shadow, a total lunar eclipse occurs. Just prior to complete entry, the brightness of the lunar limb—the curved edge of the Moon still being hit by direct sunlight—will cause the rest of the Moon to appear comparatively dim. The moment the Moon enters a complete eclipse, the entire surface will become more or less uniformly bright, being able to reveal stars surrounding it. Later, as the Moon's opposite limb is struck by sunlight, the overall disk will again become obscured. This is because, as viewed from the Earth, the brightness of a lunar limb is generally greater than that of the rest of the surface due to reflections from the many surface irregularities within the limb: sunlight striking these irregularities is always reflected back in greater quantities than that striking more central parts, which is why the edges of full moons generally appear brighter than the rest of the lunar surface. This is similar to the effect of velvet fabric over a convex curved surface, which, to an observer, will appear darkest at the center of the curve. It will be true of any planetary body with little or no atmosphere and an irregular cratered surface (e.g., Mercury) when viewed opposite the Sun.
+
+Partial Lunar Eclipse
+A lunar eclipse is an astronomical event that occurs when the Moon moves into the Earth's shadow, causing the Moon to be darkened.
+
+When the Moon's near side penetrates partially into the Earth's umbra, it is known as a partial lunar eclipse, while a total lunar eclipse occurs when the entire Moon enters the Earth's umbra. During this event, one part of the Moon is in the Earth's umbra, while the other part is in the Earth's penumbra. The Moon's average orbital speed is about 1.03 km/s (2,300 mph), or a little more than its diameter per hour, so totality may last up to nearly 107 minutes. Nevertheless, the total time between the first and last contacts of the Moon's limb with Earth's shadow is much longer and could last up to 236 minutes.
+
+Partial Solar Eclipse
+A solar eclipse occurs when the Moon passes between Earth and the Sun, thereby obscuring the view of the Sun from a small part of Earth, totally or partially.
+
+A partial eclipse occurs about twice a year, when the Sun and Moon are not exactly in line with Earth and the Moon only partially obscures the Sun. This phenomenon can usually be seen from a large part of Earth outside of the track of an annular or total eclipse. However, some eclipses can be seen only as a partial eclipse, because the umbra passes above Earth's polar regions and never intersects Earth's surface. Partial eclipses are virtually unnoticeable in terms of the Sun's brightness, as it takes well over 90% coverage to notice any darkening at all. Even at 99%, it would be no darker than civil twilight.
+
+
