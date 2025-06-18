@@ -46,6 +46,7 @@ interface CelestialObject {
   dec: string;
   season: string;
   bestTime: string;
+  altitude: number;
 }
 
 const fetchBortleClass = async (lat: number, lon: number): Promise<string> => {
@@ -445,9 +446,10 @@ const AstroObservationApp = () => {
         ra: eq.ra.toString(),
         dec: eq.dec.toString(),
         season: "",
-        bestTime: ""
+        bestTime: "",
+        altitude: hor.altitude // Adiciona altitude
       };
-    });
+    }).filter(obj => obj.altitude > 0); // Filtra só acima do horizonte
   }
 
   // Example bright stars (add more as needed)
@@ -471,9 +473,10 @@ const AstroObservationApp = () => {
         ra: ra.toString(),
         dec: dec.toString(),
         season: "",
-        bestTime: ""
+        bestTime: "",
+        altitude: hor.altitude // Adiciona altitude
       };
-    });
+    }).filter(obj => obj.altitude > 0); // Filtra só acima do horizonte
   }
 
   useEffect(() => {
@@ -509,7 +512,8 @@ const AstroObservationApp = () => {
       dec: obj.dec.toString(),
       season: '',
       bestTime: '',
-      displayType: 'Messier'
+      displayType: 'Messier',
+      altitude: 0 // Não calculado
     }));
 
   // Atualizar allObjects para incluir Messier
@@ -570,7 +574,8 @@ const AstroObservationApp = () => {
       .filter(obj => isObjectVisible(obj.ra, obj.dec, lat, lon, date))
       .map(obj => ({
         ...obj,
-        displayType: "Messier"
+        displayType: "Messier",
+        altitude: 0 // Não calculado
       }));
 
     // Exoplanetas
@@ -578,7 +583,8 @@ const AstroObservationApp = () => {
       .filter(obj => isObjectVisible(obj.ra, obj.dec, lat, lon, date))
       .map(obj => ({
         ...obj,
-        displayType: "Exoplanet"
+        displayType: "Exoplanet",
+        altitude: 0 // Não calculado
       }));
 
     // Sol
@@ -587,7 +593,7 @@ const AstroObservationApp = () => {
     const sunHor = Horizon(date, observer, sunEq.ra, sunEq.dec, "normal");
     const sunVisible = sunHor.altitude > 0;
     const sunObj = sunVisible
-      ? [{ name: "Sun", type: "sun", ra: sunEq.ra.toString(), dec: sunEq.dec.toString(), displayType: "Sun" }]
+      ? [{ name: "Sun", type: "sun", ra: sunEq.ra.toString(), dec: sunEq.dec.toString(), displayType: "Sun", magnitude: 0, constellation: '', season: '', bestTime: '', altitude: sunHor.altitude }]
       : [];
 
     // Lua
@@ -595,7 +601,7 @@ const AstroObservationApp = () => {
     const moonHor = Horizon(date, observer, moonEq.ra, moonEq.dec, "normal");
     const moonVisible = moonHor.altitude > 0;
     const moonObj = moonVisible
-      ? [{ name: "Moon", type: "moon", ra: moonEq.ra.toString(), dec: moonEq.dec.toString(), displayType: "Moon" }]
+      ? [{ name: "Moon", type: "moon", ra: moonEq.ra.toString(), dec: moonEq.dec.toString(), displayType: "Moon", magnitude: 0, constellation: '', season: '', bestTime: '', altitude: moonHor.altitude }]
       : [];
 
     // Junte tudo
