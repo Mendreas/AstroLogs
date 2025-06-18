@@ -1593,6 +1593,8 @@ const AstroObservationApp = () => {
                       className="p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
                     >
                       <option value="ly">Light Years</option>
+                      <option value="Mly">Milion Light Years</option>
+                      <option value="pc">Parsecs</option>
                       <option value="AU">AU</option>
                       <option value="km">km</option>
                     </select>
