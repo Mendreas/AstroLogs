@@ -1366,7 +1366,7 @@ const AstroObservationApp = () => {
             {/* Calendar Tab */}
             {activeTab === 'calendar' && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Astronomical Calendar</h2>
+                <h2 className="text-2xl font-bold">Observations and next events</h2>
                 <div className="flex flex-col lg:flex-row gap-8 w-full">
                   <div className="bg-gray-800 rounded-lg p-6 flex-1 min-w-[320px]" style={{ maxWidth: 500, width: '100%' }}>
                     <div className="flex items-center justify-between mb-4">
