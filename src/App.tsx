@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, MapPin, Search, Plus, Star, Filter, Settings, Download, Upload, Save, X, Eye, Moon, Sun, Edit } from 'lucide-react';
+import { MapPin, Plus, Star, Download, Upload, Save, X, Eye, Sun, Edit } from 'lucide-react';
 import { Body, Observer, Equator, Horizon, MoonPhase } from "astronomy-engine";
 import EventList from "./components/EventList";
 import { EventType } from "./components/EventCard";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import SolarSystemAnimation from './SolarSystemAnimation';
-import { animate } from 'animejs';
 
 function moonPhaseName(phase: number) {
   if (phase < 0.03 || phase > 0.97) return "New Moon";
@@ -49,12 +47,22 @@ interface CelestialObject {
   altitude: number;
 }
 
+interface VisibleObject extends CelestialObject {
+  displayType: string;
+}
+
+interface LocationSuggestion {
+  place_id: string;
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
 const fetchBortleClass = async (lat: number, lon: number): Promise<string> => {
   try {
     const url = `https://www.lightpollutionmap.info/QueryRaster/?ql=wa_2015&x=${lon}&y=${lat}&z=8`;
     const res = await fetch(url);
     const data = await res.json();
-    console.log("Bortle API response:", data); // <-- Add this line
     const sqm = data.value;
     if (typeof sqm !== "number") return "Unknown";
     if (sqm >= 21.99) return "Class 1: Excellent dark-sky site";
@@ -80,14 +88,14 @@ const uploadToImgur = async (file: File) => {
   const response = await fetch("https://api.imgur.com/3/image", {
     method: "POST",
     headers: {
-      Authorization: "Client-ID 1279890457abbbf"
+      Authorization: `Client-ID ${process.env.REACT_APP_IMGUR_CLIENT_ID}`
     },
     body: formData
   });
 
   const data = await response.json();
   if (data.success) {
-    return data.data.link; // This is the public URL
+    return data.data.link;
   } else {
     throw new Error("Imgur upload failed");
   }
@@ -108,44 +116,37 @@ const AstroObservationApp = () => {
   const [showFavorites, setShowFavorites] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [showSuccess, setShowSuccess] = useState(false);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  };
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedObservation, setSelectedObservation] = useState<Observation | null>(null);
   const [calendarSelectedDay, setCalendarSelectedDay] = useState<number | null>(null);
   const [bortleClass, setBortleClass] = useState<string>('Loading...');
   const [showSkyChart, setShowSkyChart] = useState(false);
   const [redFilter, setRedFilter] = useState(false);
-  const [moonInfo, setMoonInfo] = useState<{altitude: number, phase: number, illumination: number} | null>(null);
   const [visiblePlanets, setVisiblePlanets] = useState<CelestialObject[]>([]);
   const [visibleStars, setVisibleStars] = useState<CelestialObject[]>([]);
-  const [locationSuggestions, setLocationSuggestions] = useState<any[]>([]);
-  const [visibleObjectsNow, setVisibleObjectsNow] = useState<any[]>([]);
-  const [searchText, setSearchText] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [visibleObjectsNow, setVisibleObjectsNow] = useState<VisibleObject[]>([]);
   const [events, setEvents] = useState<EventType[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [isIphone, setIsIphone] = useState(false);
 
-  // Exemplo de exoplanetas famosos
   const exoplanets = [
     { name: "51 Pegasi b", type: "exoplanet", ra: 344.366, dec: 20.768 },
     { name: "HD 209458 b", type: "exoplanet", ra: 330.794, dec: 18.884 },
-    // ...adicione mais se quiser
   ];
 
-  // Exemplo de deep sky objects (Messier)
   const deepSkyObjects = [
     { name: "M31 (Andromeda Galaxy)", type: "galaxy", ra: 10.6847, dec: 41.2692 },
     { name: "M42 (Orion Nebula)", type: "nebula", ra: 83.8221, dec: -5.3911 },
     { name: "M13 (Hercules Cluster)", type: "cluster", ra: 250.423, dec: 36.461 },
-    // ...adicione mais Messier/NGC
   ];
 
-  // Sample celestial objects with visibility data
-  // const celestialObjects: CelestialObject[] = [ ... ];
-  // const [visibleObjects, setVisibleObjects] = useState<CelestialObject[]>([]);
-  // const calculateVisibleObjects = () => { ... };
-  // useEffect(() => { calculateVisibleObjects(); }, [currentTime, userLocation]);
-
-  // Form state
   const [formData, setFormData] = useState<Omit<Observation, 'id' | 'dateAdded'>>({
     name: '',
     type: 'star',
@@ -161,41 +162,26 @@ const AstroObservationApp = () => {
     image: ''
   });
 
-  // Update current time every minute
-  // useEffect(() => {
-  //   const timer = setInterval(() => {
-  //     setCurrentTime(new Date());
-  //   }, 60000);
-  //   return () => clearInterval(timer);
-  // }, []);
-
-  // Calculate moon phase (simplified)
+  // Update current time every minute so sky objects stay accurate
   useEffect(() => {
-    const calculateMoonPhase = () => {
-      const now = new Date(currentTime);
-      const daysSinceNewMoon = ((now.getTime() - new Date('2024-01-11').getTime()) / (1000 * 60 * 60 * 24)) % 29.53;
-      const phase = daysSinceNewMoon;
-      let phaseName = '';
-      if (phase < 1) phaseName = 'New Moon';
-      else if (phase < 7.4) phaseName = 'Waxing Crescent';
-      else if (phase < 8.4) phaseName = 'First Quarter';
-      else if (phase < 14.8) phaseName = 'Waxing Gibbous';
-      else if (phase < 15.8) phaseName = 'Full Moon';
-      else if (phase < 22.1) phaseName = 'Waning Gibbous';
-      else if (phase < 23.1) phaseName = 'Last Quarter';
-      else phaseName = 'Waning Crescent';
-      const illumination = Math.abs(Math.cos((phase / 29.53) * 2 * Math.PI)) * 100;
-      setMoonPhase({ phase: phaseName, illumination: Math.round(illumination) });
-    };
-    calculateMoonPhase();
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Calculate moon phase using astronomy-engine for accurate results
+  useEffect(() => {
+    const angle = MoonPhase(currentTime); // 0-360: 0=New, 90=First Quarter, 180=Full, 270=Last Quarter
+    const fraction = angle / 360;
+    const illumination = Math.round((1 - Math.cos((angle * Math.PI) / 180)) / 2 * 100);
+    setMoonPhase({ phase: moonPhaseName(fraction), illumination });
   }, [currentTime]);
 
-  // Fetch Bortle class for user location
   useEffect(() => {
     fetchBortleClass(userLocation.lat, userLocation.lng).then(setBortleClass);
   }, [userLocation]);
 
-  // Reverse geocode when userLocation changes
   useEffect(() => {
     fetch(`${nominatimBase}/reverse?lat=${userLocation.lat}&lon=${userLocation.lng}&format=json`)
       .then(res => res.json())
@@ -205,15 +191,6 @@ const AstroObservationApp = () => {
       .catch(() => setPlaceName('Unknown location'));
   }, [userLocation]);
 
-  const getCurrentSeason = () => {
-    const month = currentTime.getMonth();
-    if (month >= 2 && month <= 4) return 'spring';
-    if (month >= 5 && month <= 7) return 'summer';
-    if (month >= 8 && month <= 10) return 'autumn';
-    return 'winter';
-  };
-
-  // Handler for geolocation button
   const getLocationData = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -230,7 +207,6 @@ const AstroObservationApp = () => {
     }
   };
 
-  // Geocode place name
   const handlePlaceInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPlaceInput(e.target.value);
     if (e.target.value.length > 2) {
@@ -242,15 +218,13 @@ const AstroObservationApp = () => {
     }
   };
 
-  // Add or edit observation
   const handleAddObservation = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
-      alert('Please enter an object name');
+      showNotification('Please enter an object name');
       return;
     }
     if (editObservationId !== null) {
-      // Edit mode
       setObservations(obs =>
         obs.map(o =>
           o.id === editObservationId
@@ -260,7 +234,6 @@ const AstroObservationApp = () => {
       );
       setEditObservationId(null);
     } else {
-      // Add mode
       const newObservation: Observation = {
         id: Date.now(),
         ...formData,
@@ -284,7 +257,7 @@ const AstroObservationApp = () => {
     });
     setShowAddForm(false);
     setShowSuccess(true);
-    setActiveTab('objects'); // Switch to objects tab after add/edit
+    setActiveTab('objects');
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
@@ -295,11 +268,7 @@ const AstroObservationApp = () => {
         const imgurUrl = await uploadToImgur(file);
         setFormData({ ...formData, image: imgurUrl });
       } catch (err) {
-        if (err instanceof Error) {
-          alert("Image upload failed: " + err.message);
-        } else {
-          alert("Image upload failed.");
-        }
+        showNotification(err instanceof Error ? "Image upload failed: " + err.message : "Image upload failed.");
       }
     }
   };
@@ -352,7 +321,6 @@ const AstroObservationApp = () => {
     setCalendarSelectedDay(null);
   };
 
-  // Fix: days array should be (number|null)[]
   const getDaysInMonth = (date: Date): (number | null)[] => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -380,7 +348,6 @@ const AstroObservationApp = () => {
     linkElement.click();
   };
 
-  // Import observations from JSON file
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
@@ -391,10 +358,10 @@ const AstroObservationApp = () => {
           if (Array.isArray(imported)) {
             setObservations(imported);
           } else {
-            alert('Invalid file format.');
+            showNotification('Invalid file format.');
           }
         } catch {
-          alert('Could not import file.');
+          showNotification('Could not import file.');
         }
       };
       reader.readAsText(file);
@@ -407,7 +374,6 @@ const AstroObservationApp = () => {
     return typeMatch && favoriteMatch;
   });
 
-  // Calendar: get observations for a given day
   const getObservationsForDay = (date: Date, day: number) => {
     const yyyy = date.getFullYear();
     const mm = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -416,7 +382,6 @@ const AstroObservationApp = () => {
     return observations.filter(obs => obs.date === dateStr);
   };
 
-  // When editing, pre-fill the form
   useEffect(() => {
     if (editObservationId !== null) {
       const obs = observations.find(o => o.id === editObservationId);
@@ -447,16 +412,14 @@ const AstroObservationApp = () => {
         dec: eq.dec.toString(),
         season: "",
         bestTime: "",
-        altitude: hor.altitude // Adiciona altitude
+        altitude: hor.altitude
       };
-    }).filter(obj => obj.altitude > 0); // Filtra só acima do horizonte
+    }).filter(obj => obj.altitude > 0);
   }
 
-  // Example bright stars (add more as needed)
   const brightStars = [
     { name: "Sirius", ra: 6.752, dec: -16.716 },
     { name: "Vega", ra: 18.615, dec: 38.783 },
-    // ... more stars ...
   ];
 
   function getVisibleBrightStars(lat: number, lon: number, date: Date): CelestialObject[] {
@@ -474,9 +437,9 @@ const AstroObservationApp = () => {
         dec: dec.toString(),
         season: "",
         bestTime: "",
-        altitude: hor.altitude // Adiciona altitude
+        altitude: hor.altitude
       };
-    }).filter(obj => obj.altitude > 0); // Filtra só acima do horizonte
+    }).filter(obj => obj.altitude > 0);
   }
 
   useEffect(() => {
@@ -485,6 +448,7 @@ const AstroObservationApp = () => {
       setVisiblePlanets(getVisiblePlanets(userLocation.lat, userLocation.lng, now));
       setVisibleStars(getVisibleBrightStars(userLocation.lat, userLocation.lng, now));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation, currentTime]);
 
   function simbadUrl(name: string) {
@@ -500,7 +464,6 @@ const AstroObservationApp = () => {
     return `https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=${encodeURIComponent(name)}`;
   }
 
-  // Adicionar Messier/NGC (deep sky) ao dropdown e à lista de objetos visíveis
   const visibleMessierObjects = deepSkyObjects
     .filter(obj => isObjectVisible(obj.ra, obj.dec, userLocation.lat, userLocation.lng, currentTime))
     .map(obj => ({
@@ -513,81 +476,77 @@ const AstroObservationApp = () => {
       season: '',
       bestTime: '',
       displayType: 'Messier',
-      altitude: 0 // Não calculado
+      altitude: 0
     }));
 
-  // Atualizar allObjects para incluir Messier
   const allObjects: CelestialObject[] = [
     ...visiblePlanets,
     ...visibleStars,
     ...visibleMessierObjects
   ];
 
-  // Função para calcular objetos visíveis em um dado horário
   function getVisibleObjectsAtHour(lat: number, lon: number, baseDate: Date, hour: number) {
     const date = new Date(baseDate);
     date.setHours(hour, 0, 0, 0);
     const planets = getVisiblePlanets(lat, lon, date);
     const stars = getVisibleBrightStars(lat, lon, date);
-
-    // Deep sky
     const deepSky = deepSkyObjects.filter(obj =>
       isObjectVisible(obj.ra, obj.dec, lat, lon, date)
     );
-
-    // Exoplanetas
     const exos = exoplanets.filter(obj =>
       isObjectVisible(obj.ra, obj.dec, lat, lon, date)
     );
-
     return planets.length + stars.length + deepSky.length + exos.length;
   }
 
   function isObjectVisible(ra: number, dec: number, lat: number, lon: number, date: Date) {
     const observer = new Observer(lat, lon, 0);
-    // RA em horas para graus: se necessário, divida por 15
     const hor = Horizon(date, observer, ra, dec, "normal");
     return hor.altitude > 0;
   }
 
-  // Atualizar visibleObjectsNow para incluir Messier
   useEffect(() => {
     setVisibleObjectsNow(getAllVisibleObjects(userLocation.lat, userLocation.lng, currentTime));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation, currentTime]);
 
-  // Atualizar getAllVisibleObjects para incluir Messier
   function getAllVisibleObjects(lat: number, lon: number, date: Date) {
-    // Planetas
     const planets = getVisiblePlanets(lat, lon, date).map(obj => ({
       ...obj,
       displayType: "Planet"
     }));
-
-    // Estrelas brilhantes
     const stars = getVisibleBrightStars(lat, lon, date).map(obj => ({
       ...obj,
       displayType: "Star"
     }));
-
-    // Messier/NGC (deep sky)
-    const messier = deepSkyObjects
+    const messier: VisibleObject[] = deepSkyObjects
       .filter(obj => isObjectVisible(obj.ra, obj.dec, lat, lon, date))
       .map(obj => ({
-        ...obj,
+        name: obj.name,
+        type: obj.type,
+        magnitude: 0,
+        constellation: '',
+        ra: obj.ra.toString(),
+        dec: obj.dec.toString(),
+        season: '',
+        bestTime: '',
+        altitude: 0,
         displayType: "Messier",
-        altitude: 0 // Não calculado
       }));
-
-    // Exoplanetas
-    const exos = exoplanets
+    const exos: VisibleObject[] = exoplanets
       .filter(obj => isObjectVisible(obj.ra, obj.dec, lat, lon, date))
       .map(obj => ({
-        ...obj,
+        name: obj.name,
+        type: obj.type,
+        magnitude: 0,
+        constellation: '',
+        ra: obj.ra.toString(),
+        dec: obj.dec.toString(),
+        season: '',
+        bestTime: '',
+        altitude: 0,
         displayType: "Exoplanet",
-        altitude: 0 // Não calculado
       }));
-
-    // Sol
     const observer = new Observer(lat, lon, 0);
     const sunEq = Equator(Body.Sun, date, observer, true, true);
     const sunHor = Horizon(date, observer, sunEq.ra, sunEq.dec, "normal");
@@ -595,39 +554,29 @@ const AstroObservationApp = () => {
     const sunObj = sunVisible
       ? [{ name: "Sun", type: "sun", ra: sunEq.ra.toString(), dec: sunEq.dec.toString(), displayType: "Sun", magnitude: 0, constellation: '', season: '', bestTime: '', altitude: sunHor.altitude }]
       : [];
-
-    // Lua
     const moonEq = Equator(Body.Moon, date, observer, true, true);
     const moonHor = Horizon(date, observer, moonEq.ra, moonEq.dec, "normal");
     const moonVisible = moonHor.altitude > 0;
     const moonObj = moonVisible
       ? [{ name: "Moon", type: "moon", ra: moonEq.ra.toString(), dec: moonEq.dec.toString(), displayType: "Moon", magnitude: 0, constellation: '', season: '', bestTime: '', altitude: moonHor.altitude }]
       : [];
-
-    // Junte tudo
     return [...sunObj, ...moonObj, ...planets, ...stars, ...messier, ...exos];
   }
 
-  // Carregar ao iniciar
   useEffect(() => {
     const saved = localStorage.getItem("observations");
     if (saved) setObservations(JSON.parse(saved));
   }, []);
 
-  // Salvar sempre que mudar
   useEffect(() => {
     localStorage.setItem("observations", JSON.stringify(observations));
   }, [observations]);
 
-  // Helper to parse AstroEvents.txt and events list.txt
   const parseEvents = useCallback(async (currentTime: Date) => {
-    // Fetch both files
     const [astroEventsText, eventsListText] = await Promise.all([
       fetch('/AstroLogs/AstroEvents.txt').then(r => r.text()),
       fetch(`${process.env.PUBLIC_URL}/events-list.txt`).then(r => r.text())
     ]);
-
-    // Parse events list.txt into a map: name (lowercase) -> description
     const eventDescMap: Record<string, string> = {};
     const lines = eventsListText.split(/\r?\n/);
     let currentTitle = '';
@@ -647,11 +596,8 @@ const AstroObservationApp = () => {
     if (currentTitle) {
       eventDescMap[currentTitle.toLowerCase()] = currentDesc.join('\n').trim();
     }
-
-    // Parse AstroEvents.txt
     const eventList: EventType[] = [];
     let currentYear = '';
-    let currentMonth = '';
     const monthMap: { [key: string]: string } = {
       January: '01', February: '02', March: '03', April: '04', May: '05', June: '06',
       July: '07', August: '08', September: '09', October: '10', November: '11', December: '12'
@@ -664,20 +610,15 @@ const AstroObservationApp = () => {
         continue;
       }
       if (Object.keys(monthMap).includes(line)) {
-        currentMonth = line;
         continue;
       }
-      // Event line: e.g. "January 13, 22:27 UTC – Full Moon (Wolf Moon)"
       if (/^(January|February|March|April|May|June|July|August|September|October|November|December)/.test(line)) {
-        // Extract day(s), name
         const match = line.match(/^(\w+)\s+(\d{1,2}(?:–\d{1,2})?)(?:,?\s*([\d: UTC-]+))?\s*[–-]\s*(.+)$/);
         if (match) {
           const [, month, day, , nameRaw] = match;
           let name = nameRaw.split(':')[0].trim();
           let eventId = `${currentYear}-${monthMap[month]}-${day.split('–')[0].padStart(2, '0')}-${name}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-          // Compose date (use first day if range)
           const dateStr = `${currentYear}-${monthMap[month]}-${day.split('–')[0].padStart(2, '0')}`;
-          // Image logic
           let imageName = '';
           const moonMatch = name.match(/Full Moon \(([^)]+)\)/i);
           if (moonMatch) {
@@ -687,7 +628,6 @@ const AstroObservationApp = () => {
           } else {
             imageName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') + '.jpg';
           }
-          // Description
           let descKey = name.toLowerCase().replace(/\(.+\)/, '').trim();
           let description = eventDescMap[descKey] || 'No data available.';
           let fullDescription = eventDescMap[descKey] ? eventDescMap[descKey] : 'No data available.';
@@ -702,23 +642,18 @@ const AstroObservationApp = () => {
         }
       }
     }
-    // Sort chronologically
     eventList.sort((a, b) => a.date.localeCompare(b.date));
     return eventList;
   }, []);
 
-  // Load and filter events
   useEffect(() => {
     setEventsLoading(true);
     parseEvents(currentTime).then(allEvents => {
-      console.log("Total events parsed:", allEvents.length);
-      // Filter by year logic
       const now = currentTime;
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
       let filtered: EventType[] = [];
       if (month === 12) {
-        // December: show all events from this year and next year
         filtered = allEvents.filter(ev => {
           const evYear = parseInt(ev.date.split('-')[0]);
           return evYear === year || evYear === year + 1;
@@ -726,18 +661,12 @@ const AstroObservationApp = () => {
       } else {
         filtered = allEvents.filter(ev => parseInt(ev.date.split('-')[0]) === year);
       }
-      // Remove past events
       filtered = filtered.filter(ev => new Date(ev.date) >= now);
       setEvents(filtered);
       setEventsLoading(false);
     });
   }, [currentTime, parseEvents]);
 
-  const filteredEvents = events.filter(event =>
-    event.name.toLowerCase().includes(searchText.toLowerCase())
-  );
-
-  // Adicionar useEffect para detectar iOS
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     if (isIOS) {
@@ -795,10 +724,8 @@ const AstroObservationApp = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // --- UI rendering below ---
   return (
     <div style={{ position: 'relative' }}>
-      {/* Widget de tradução fixo no topo direito */}
       <div className="fixed-translate-widget" style={{ position: 'fixed', top: 16, right: 24, zIndex: 10010, background: 'transparent' }}>
         <div className="elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129" data-elfsight-app-lazy></div>
       </div>
@@ -806,9 +733,8 @@ const AstroObservationApp = () => {
         <div className="red-filter-overlay" />
       )}
       <div className={`min-h-screen${redFilter ? ' red-filter-text bg-[#1a0000]' : ' text-white bg-gray-900'}`}>
-        {/* Header + Navigation container */}
         <div className={`w-full mx-auto rounded-b-2xl shadow-lg ${redFilter ? 'red-filter-header' : 'bg-gray-800'}`} style={{ maxWidth: 1600 }}>
-          <header className={`p-4 shadow-none ${redFilter ? '' : ''}`} style={{ paddingLeft: '10px', paddingRight: '10px', borderBottom: 'none' }}>
+          <header className={`p-4 shadow-none`} style={{ paddingLeft: '10px', paddingRight: '10px', borderBottom: 'none' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="text-2xl">🔭</div>
@@ -836,7 +762,7 @@ const AstroObservationApp = () => {
               </div>
             </div>
           </header>
-          <nav className={`border-t border-gray-700 ${redFilter ? '' : ''}`} style={{ paddingLeft: '10px', paddingRight: '10px' }}>
+          <nav style={{ paddingLeft: '10px', paddingRight: '10px' }} className="border-t border-gray-700">
             <div className="flex space-x-8">
               {[
                 { id: 'home', label: 'Home', icon: '🏠' },
@@ -863,10 +789,8 @@ const AstroObservationApp = () => {
             </div>
           </nav>
           <main className="w-full px-4 py-6" style={{ maxWidth: 1600, margin: '0 auto' }}>
-            {/* Home Tab */}
             {activeTab === 'home' && (
               <div className="space-y-6">
-                {/* What can I observe now section */}
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h2 className="text-xl font-bold mb-4 flex items-center">
                     <Eye className="mr-2" size={24} />
@@ -891,7 +815,6 @@ const AstroObservationApp = () => {
                       </select>
                       {selectedObject && (
                         <div className="space-x-2 mt-2">
-                          {/* Planets (Solar System) */}
                           {selectedObject.type === "planet" && (
                             <>
                               <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
@@ -899,19 +822,12 @@ const AstroObservationApp = () => {
                               <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
                             </>
                           )}
-
-                          {/* Messier/NGC/Deep Sky Objects */}
-                          {(selectedObject.type === "galaxy" ||
-                            selectedObject.type === "nebula" ||
-                            selectedObject.type === "cluster" ||
-                            selectedObject.type === "deep_sky") && (
+                          {(selectedObject.type === "galaxy" || selectedObject.type === "nebula" || selectedObject.type === "cluster" || selectedObject.type === "deep_sky") && (
                             <>
                               <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
                               <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
                             </>
                           )}
-
-                          {/* Exoplanets */}
                           {selectedObject.type === "exoplanet" && (
                             <>
                               <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
@@ -919,8 +835,6 @@ const AstroObservationApp = () => {
                               <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
                             </>
                           )}
-
-                          {/* Stars */}
                           {selectedObject.type === "star" && (
                             <>
                               <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
@@ -1002,13 +916,16 @@ const AstroObservationApp = () => {
                   </div>
                   <div className="mt-4">
                     <div className="mb-2">
+                      <span className="font-bold text-gray-300">Light pollution: </span>
+                      <span className="text-yellow-300">{bortleClass}</span>
+                      {' · '}
                       <a
                         href={`https://lightpollutionmap.app/?lat=${userLocation.lat.toFixed(5)}&lng=${userLocation.lng.toFixed(5)}&zoom=6`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-400 underline font-bold"
+                        className="text-blue-400 underline"
                       >
-                        View Light Pollution Map (Bortle Scale)
+                        View map
                       </a>
                     </div>
                     <div className="mb-2">
@@ -1060,7 +977,6 @@ const AstroObservationApp = () => {
                   )}
                 </div>
 
-                {/* Currently Visible Objects */}
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-bold mb-4">🌠 Objects</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1074,7 +990,6 @@ const AstroObservationApp = () => {
                         {obj.ra && obj.dec && (
                           <p className="text-sm text-gray-300">RA: {obj.ra} | Dec: {obj.dec}</p>
                         )}
-                        {/* Links: personalize conforme o tipo */}
                         <div className="space-x-2 mt-2">
                           <a href={wikipediaUrl(obj.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
                           <a href={simbadUrl(obj.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
@@ -1090,12 +1005,16 @@ const AstroObservationApp = () => {
                   </div>
                 </div>
 
-                {/* Moon Phase */}
                 <div className="bg-gray-800 rounded-lg p-6" style={{ minHeight: '340px', overflow: 'visible' }}>
                   <h3 className="text-lg font-bold mb-4 flex items-center">
                     <span className="mr-2">🌙</span>
                     Moon Today
                   </h3>
+                  <div className="mb-4 flex items-center space-x-4">
+                    <span className="text-lg font-semibold text-blue-300">{moonPhase.phase}</span>
+                    <span className="text-gray-400">·</span>
+                    <span className="text-gray-300">{moonPhase.illumination}% illuminated</span>
+                  </div>
                   <iframe
                     title="Moon Giant Phase"
                     src="https://www.moongiant.com/phase/today/"
@@ -1106,13 +1025,12 @@ const AstroObservationApp = () => {
                     style={{ background: "transparent" }}
                   ></iframe>
                   <div className="text-xs text-gray-400 mt-2">
-                    Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener">MoonGiant.com</a>
+                    Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener noreferrer">MoonGiant.com</a>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Solar System Tab */}
             {activeTab === 'solar' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold mb-4 flex items-center">
@@ -1120,17 +1038,11 @@ const AstroObservationApp = () => {
                   Solar System
                 </h2>
                 <div className="bg-gray-800 rounded-lg p-6">
-                  <iframe 
-                    src="https://www.solarsystemscope.com/iframe" 
-                    width="100%" 
-                    height="600" 
-                    style={{
-                      minWidth: "500px",
-                      minHeight: "400px",
-                      border: "2px solid #0f5c6e",
-                      borderRadius: "8px",
-                      backgroundColor: "transparent"
-                    }}
+                  <iframe
+                    src="https://www.solarsystemscope.com/iframe"
+                    width="100%"
+                    height="600"
+                    style={{ minWidth: "500px", minHeight: "400px", border: "2px solid #0f5c6e", borderRadius: "8px", backgroundColor: "transparent" }}
                     title="Solar System Scope"
                     frameBorder="0"
                     allowFullScreen
@@ -1142,7 +1054,6 @@ const AstroObservationApp = () => {
               </div>
             )}
 
-            {/* Objects Tab */}
             {activeTab === 'objects' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -1170,7 +1081,6 @@ const AstroObservationApp = () => {
                     </select>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredObservations.map(obs => (
                     <div
@@ -1203,11 +1113,9 @@ const AstroObservationApp = () => {
                       <div>
                         <a href={simbadUrl(obs.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a> |{" "}
                         <a href={wikipediaUrl(obs.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                        {/* For exoplanets: */}
                         {obs.type === "exoplanet" && (
                           <> | <a href={nasaExoplanetUrl(obs.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a></>
                         )}
-                        {/* For solar system objects: */}
                         {obs.type === "planet" && (
                           <> | <a href={jplSsdUrl(obs.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a></>
                         )}
@@ -1215,7 +1123,6 @@ const AstroObservationApp = () => {
                     </div>
                   ))}
                 </div>
-
                 {filteredObservations.length === 0 && (
                   <div className="text-center py-12">
                     <div className="text-6xl mb-4">🔭</div>
@@ -1232,7 +1139,6 @@ const AstroObservationApp = () => {
               </div>
             )}
 
-            {/* Resources Tab */}
             {activeTab === 'resources' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Astronomical Resources</h2>
@@ -1248,7 +1154,7 @@ const AstroObservationApp = () => {
                   <div className="bg-gray-800 rounded-lg p-6">
                     <h3 className="text-lg font-bold mb-4">Tools</h3>
                     <ul className="space-y-2">
-                    <li><a href="https://www.timeanddate.com/moon/phases/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Moon Phases</a></li>
+                      <li><a href="https://www.timeanddate.com/moon/phases/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Moon Phases</a></li>
                       <li><a href="https://stellarium-web.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Stellarium Web</a></li>
                       <li><a href="https://www.heavens-above.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Heavens Above</a></li>
                     </ul>
@@ -1256,63 +1162,24 @@ const AstroObservationApp = () => {
                 </div>
                 <div className="meteoblue-widgets flex flex-wrap gap-4 mt-8">
                   <div className="max-w-[480px] flex-shrink-0" style={{ width: 480 }}>
-                    <iframe
-                      title="Previsão do tempo meteoblue"
-                      src="https://www.meteoblue.com/pt/tempo/widget/three?geoloc=detect&nocurrent=0&noforecast=0&days=4&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&layout=image"
-                      frameBorder="0" scrolling="no" allowTransparency={true}
-                      sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
-                      className="w-full"
-                      style={{ height: 590 }}
-                    ></iframe>
-                    <div>
-                      <a href="https://www.meteoblue.com/pt/tempo/semana/index?utm_source=three_widget&utm_medium=linkus&utm_content=three&utm_campaign=Weather%2BWidget"
-                         target="_blank" rel="noopener">meteoblue</a>
-                    </div>
+                    <iframe title="Previsão do tempo meteoblue" src="https://www.meteoblue.com/pt/tempo/widget/three?geoloc=detect&nocurrent=0&noforecast=0&days=4&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&layout=image" frameBorder="0" scrolling="no" allowTransparency={true} sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" className="w-full" style={{ height: 590 }}></iframe>
+                    <div><a href="https://www.meteoblue.com/pt/tempo/semana/index?utm_source=three_widget&utm_medium=linkus&utm_content=three&utm_campaign=Weather%2BWidget" target="_blank" rel="noopener noreferrer">meteoblue</a></div>
                   </div>
                   <div className="max-w-[540px] flex-shrink-0" style={{ width: 540 }}>
-                    <iframe
-                      title="Observação meteoblue"
-                      src="https://www.meteoblue.com/pt/tempo/widget/seeing?geoloc=detect&noground=0"
-                      frameBorder="0" scrolling="no" allowTransparency={true}
-                      sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
-                      className="w-full"
-                      style={{ height: 775 }}
-                    ></iframe>
-                    <div>
-                      <a href="https://www.meteoblue.com/pt/tempo/previsao/seeing?utm_source=seeing_widget&utm_medium=linkus&utm_content=seeing&utm_campaign=Weather%2BWidget"
-                         target="_blank" rel="noopener">meteoblue</a>
-                    </div>
+                    <iframe title="Observação meteoblue" src="https://www.meteoblue.com/pt/tempo/widget/seeing?geoloc=detect&noground=0" frameBorder="0" scrolling="no" allowTransparency={true} sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" className="w-full" style={{ height: 775 }}></iframe>
+                    <div><a href="https://www.meteoblue.com/pt/tempo/previsao/seeing?utm_source=seeing_widget&utm_medium=linkus&utm_content=seeing&utm_campaign=Weather%2BWidget" target="_blank" rel="noopener noreferrer">meteoblue</a></div>
                   </div>
                   <div className="max-w-[520px] flex-shrink-0" style={{ width: 520 }}>
-                    <iframe
-                      title="Mapa meteoblue"
-                      src="https://www.meteoblue.com/pt/tempo/mapas/widget?windAnimation=1&gust=1&satellite=1&cloudsAndPrecipitation=1&temperature=1&sunshine=1&extremeForecastIndex=1&geoloc=detect&tempunit=C&windunit=km%252Fh&lengthunit=metric&zoom=5&autowidth=manu"
-                      frameBorder="0" scrolling="no" allowTransparency={true}
-                      sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
-                      className="w-full"
-                      style={{ height: 720 }}
-                    ></iframe>
-                    <div>
-                      <a href="https://www.meteoblue.com/pt/tempo/mapas/index?utm_source=map_widget&utm_medium=linkus&utm_content=map&utm_campaign=Weather%2BWidget"
-                         target="_blank" rel="noopener">meteoblue</a>
-                    </div>
+                    <iframe title="Mapa meteoblue" src="https://www.meteoblue.com/pt/tempo/mapas/widget?windAnimation=1&gust=1&satellite=1&cloudsAndPrecipitation=1&temperature=1&sunshine=1&extremeForecastIndex=1&geoloc=detect&tempunit=C&windunit=km%252Fh&lengthunit=metric&zoom=5&autowidth=manu" frameBorder="0" scrolling="no" allowTransparency={true} sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" className="w-full" style={{ height: 720 }}></iframe>
+                    <div><a href="https://www.meteoblue.com/pt/tempo/mapas/index?utm_source=map_widget&utm_medium=linkus&utm_content=map&utm_campaign=Weather%2BWidget" target="_blank" rel="noopener noreferrer">meteoblue</a></div>
                   </div>
                 </div>
-                {/* Clear Outside widget */}
                 <div className="mt-8">
                   {userLocation && (
                     <div className="bg-gray-800 rounded-lg p-4">
                       <h3 className="text-lg font-bold mb-4">Clear Outside Forecast</h3>
-                      <a 
-                        href={`https://clearoutside.com/forecast/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <img 
-                          src={`https://clearoutside.com/forecast_image_large/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}/forecast.png`}
-                          alt="Clear Outside Forecast"
-                          style={{ width: '100%', maxWidth: 800 }}
-                        />
+                      <a href={`https://clearoutside.com/forecast/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}`} target="_blank" rel="noopener noreferrer">
+                        <img src={`https://clearoutside.com/forecast_image_large/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}/forecast.png`} alt="Clear Outside Forecast" style={{ width: '100%', maxWidth: 800 }} />
                       </a>
                     </div>
                   )}
@@ -1320,7 +1187,6 @@ const AstroObservationApp = () => {
               </div>
             )}
 
-            {/* Links Tab */}
             {activeTab === 'links' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Useful Links</h2>
@@ -1363,52 +1229,27 @@ const AstroObservationApp = () => {
               </div>
             )}
 
-            {/* Calendar Tab */}
             {activeTab === 'calendar' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Observations and next events</h2>
                 <div className="flex flex-col lg:flex-row gap-8 w-full">
                   <div className="bg-gray-800 rounded-lg p-6 flex-1 min-w-[320px]" style={{ maxWidth: 500, width: '100%' }}>
                     <div className="flex items-center justify-between mb-4">
-                      <button
-                        onClick={() => navigateCalendar('prev')}
-                        className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
-                      >
-                        ←
-                      </button>
-                      <h3 className="text-xl font-bold">
-                        {calendarDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                      </h3>
-                      <button
-                        onClick={() => navigateCalendar('next')}
-                        className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700"
-                      >
-                        →
-                      </button>
+                      <button onClick={() => navigateCalendar('prev')} className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700">←</button>
+                      <h3 className="text-xl font-bold">{calendarDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</h3>
+                      <button onClick={() => navigateCalendar('next')} className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700">→</button>
                     </div>
                     <div className="grid grid-cols-7 gap-2">
                       {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="text-center font-bold p-2 text-gray-400">
-                          {day}
-                        </div>
+                        <div key={day} className="text-center font-bold p-2 text-gray-400">{day}</div>
                       ))}
                       {getDaysInMonth(calendarDate).map((day, index) => {
-                        const isToday = day === new Date().getDate() &&
-                          calendarDate.getMonth() === new Date().getMonth() &&
-                          calendarDate.getFullYear() === new Date().getFullYear();
+                        const isToday = day === new Date().getDate() && calendarDate.getMonth() === new Date().getMonth() && calendarDate.getFullYear() === new Date().getFullYear();
                         const hasObs = day && getObservationsForDay(calendarDate, day).length > 0;
                         return (
                           <div
                             key={index}
-                            className={`text-center p-2 rounded cursor-pointer min-h-[40px] flex items-center justify-center ${
-                              day ? 'hover:bg-gray-700' : ''
-                            } ${
-                              isToday ? 'bg-blue-600 text-white' : ''
-                            } ${
-                              hasObs ? 'ring-2 ring-green-400' : ''
-                            } ${
-                              calendarSelectedDay === day ? 'bg-green-700 text-white' : ''
-                            }`}
+                            className={`text-center p-2 rounded cursor-pointer min-h-[40px] flex items-center justify-center ${day ? 'hover:bg-gray-700' : ''} ${isToday ? 'bg-blue-600 text-white' : ''} ${hasObs ? 'ring-2 ring-green-400' : ''} ${calendarSelectedDay === day ? 'bg-green-700 text-white' : ''}`}
                             onClick={() => day && setCalendarSelectedDay(day)}
                           >
                             {day || ''}
@@ -1416,7 +1257,6 @@ const AstroObservationApp = () => {
                         );
                       })}
                     </div>
-                    {/* Show observations for selected day */}
                     {calendarSelectedDay && (
                       <div className="mt-6">
                         <h4 className="font-bold mb-2">Observations for {calendarDate.getFullYear()}-{(calendarDate.getMonth() + 1).toString().padStart(2, '0')}-{calendarSelectedDay.toString().padStart(2, '0')}</h4>
@@ -1425,11 +1265,7 @@ const AstroObservationApp = () => {
                         ) : (
                           <ul className="space-y-2">
                             {getObservationsForDay(calendarDate, calendarSelectedDay).map(obs => (
-                              <li
-                                key={obs.id}
-                                className="bg-gray-700 p-3 rounded cursor-pointer hover:ring-2 hover:ring-blue-400"
-                                onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}
-                              >
+                              <li key={obs.id} className="bg-gray-700 p-3 rounded cursor-pointer hover:ring-2 hover:ring-blue-400" onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}>
                                 <span className="font-bold text-blue-300">{obs.name}</span> ({obs.type})
                               </li>
                             ))}
@@ -1449,29 +1285,20 @@ const AstroObservationApp = () => {
               </div>
             )}
 
-            {/* Settings Tab */}
             {activeTab === 'settings' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Settings & Configuration</h2>
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-bold mb-4">Data Management</h3>
                   <div className="space-y-4 flex flex-col md:flex-row md:space-y-0 md:space-x-4">
-                    <button
-                      onClick={exportObservations}
-                      className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2"
-                    >
+                    <button onClick={exportObservations} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2">
                       <Download size={16} />
                       <span>Export Observations</span>
                     </button>
                     <label className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded flex items-center space-x-2 cursor-pointer">
                       <Upload size={16} />
                       <span>Import Observations</span>
-                      <input
-                        type="file"
-                        accept="application/json"
-                        onChange={handleImport}
-                        className="hidden"
-                      />
+                      <input type="file" accept="application/json" onChange={handleImport} className="hidden" />
                     </label>
                     <button className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded flex items-center space-x-2">
                       <Save size={16} />
@@ -1484,41 +1311,23 @@ const AstroObservationApp = () => {
           </main>
         </div>
 
-        {/* Add Observation Modal */}
         {showAddForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative ios-form" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold">{editObservationId !== null ? 'Edit Observation' : 'Add Observation'}</h3>
-                <button
-                  onClick={() => { setShowAddForm(false); setEditObservationId(null); }}
-                  className="text-gray-400 hover:text-white"
-                >
+                <button onClick={() => { setShowAddForm(false); setEditObservationId(null); }} className="text-gray-400 hover:text-white">
                   <X size={24} />
                 </button>
               </div>
-
               <form onSubmit={handleAddObservation} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Object Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Object name"
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                    required
-                    inputMode="text"
-                  />
+                  <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Object name" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" required inputMode="text" />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">Type</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                  >
+                  <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input">
                     <option value="star">Star</option>
                     <option value="galaxy">Galaxy</option>
                     <option value="cluster">Cluster</option>
@@ -1527,157 +1336,71 @@ const AstroObservationApp = () => {
                     <option value="other">Other</option>
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">Observation Date</label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                  />
+                  <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">Location</label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Location"
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                  />
+                  <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="Location" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">RA</label>
-                    <input
-                      type="text"
-                      value={formData.ra}
-                      onChange={(e) => setFormData({ ...formData, ra: e.target.value })}
-                      placeholder="Right Ascension (e.g., 12h 34m 56s)"
-                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                    />
+                    <input type="text" value={formData.ra} onChange={(e) => setFormData({ ...formData, ra: e.target.value })} placeholder="Right Ascension" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">DEC</label>
-                    <input
-                      type="text"
-                      value={formData.dec}
-                      onChange={(e) => setFormData({ ...formData, dec: e.target.value })}
-                      placeholder="Declination (e.g., +45&deg; 30&apos; 00&apos;&apos;)"
-                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                    />
+                    <input type="text" value={formData.dec} onChange={(e) => setFormData({ ...formData, dec: e.target.value })} placeholder="Declination" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">Magnitude</label>
-                  <input
-                    type="text"
-                    value={formData.magnitude}
-                    onChange={(e) => setFormData({ ...formData, magnitude: e.target.value })}
-                    placeholder="Magnitude"
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                  />
+                  <input type="text" value={formData.magnitude} onChange={(e) => setFormData({ ...formData, magnitude: e.target.value })} placeholder="Magnitude" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">Distance</label>
                   <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      value={formData.distance}
-                      onChange={(e) => setFormData({ ...formData, distance: e.target.value })}
-                      placeholder="Distance"
-                      className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                    />
-                    <select
-                      value={formData.distanceUnit}
-                      onChange={(e) => setFormData({ ...formData, distanceUnit: e.target.value })}
-                      className="p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                    >
+                    <input type="text" value={formData.distance} onChange={(e) => setFormData({ ...formData, distance: e.target.value })} placeholder="Distance" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
+                    <select value={formData.distanceUnit} onChange={(e) => setFormData({ ...formData, distanceUnit: e.target.value })} className="p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input">
                       <option value="ly">Light Years</option>
-                      <option value="Mly">Milion Light Years</option>
+                      <option value="Mly">Million Light Years</option>
                       <option value="pc">Parsecs</option>
                       <option value="AU">AU</option>
                       <option value="km">km</option>
                     </select>
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">Description</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                    rows={3}
-                    placeholder="Notes about your observation..."
-                  />
+                  <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" rows={3} placeholder="Notes about your observation..." />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">Image URL</label>
-                  <input
-                    type="text"
-                    value={formData.image}
-                    onChange={e => setFormData({ ...formData, image: e.target.value })}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                    placeholder="Paste image link here (e.g., from iCloud, Imgur, etc.)"
-                  />
+                  <input type="text" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" placeholder="Paste image link here (e.g., from iCloud, Imgur, etc.)" />
                 </div>
-
                 {formData.image && (
                   <div className="mt-2">
-                    <img
-                      src={formData.image}
-                      alt="Observation"
-                      className="max-h-48 rounded border border-gray-600"
-                      style={{ maxWidth: "100%" }}
-                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    />
+                    <img src={formData.image} alt="Observation" className="max-h-48 rounded border border-gray-600" style={{ maxWidth: "100%" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                   </div>
                 )}
-
                 <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="favorite"
-                    checked={formData.favorite}
-                    onChange={(e) => setFormData({ ...formData, favorite: e.target.checked })}
-                    className="rounded"
-                  />
+                  <input type="checkbox" id="favorite" checked={formData.favorite} onChange={(e) => setFormData({ ...formData, favorite: e.target.checked })} className="rounded" />
                   <label htmlFor="favorite" className="text-sm">Mark as Favorite ⭐</label>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium mb-2">Image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                  />
+                  <label className="block text-sm font-medium mb-2">Upload Image</label>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
                   {formData.image && (
                     <img src={formData.image} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg" />
                   )}
                 </div>
-
                 <div className="flex space-x-4 pt-4">
-                  <button
-                    type="submit"
-                    className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded flex items-center justify-center space-x-2"
-                  >
+                  <button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded flex items-center justify-center space-x-2">
                     <Save size={16} />
                     <span>Save</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(false)}
-                    className="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded"
-                  >
+                  <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded">
                     Cancel
                   </button>
                 </div>
@@ -1686,28 +1409,15 @@ const AstroObservationApp = () => {
           </div>
         )}
 
-        {/* Observation Detail Modal */}
         {showDetailModal && selectedObservation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative" style={{ WebkitOverflowScrolling: 'touch' }}>
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl"
-                aria-label="Fechar"
-              >
-                &times;
-              </button>
+              <button onClick={() => setShowDetailModal(false)} className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl" aria-label="Fechar">&times;</button>
               <div className="space-y-2">
                 <div className="font-bold text-lg text-blue-400">{selectedObservation.name}</div>
                 {selectedObservation.image && (
                   <div className="mb-3">
-                    <img
-                      src={selectedObservation.image}
-                      alt={selectedObservation.name}
-                      className="w-full h-48 object-cover rounded-lg hover:opacity-80 cursor-pointer"
-                      onClick={() => handleImageClick(selectedObservation.image)}
-                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                    />
+                    <img src={selectedObservation.image} alt={selectedObservation.name} className="w-full h-48 object-cover rounded-lg hover:opacity-80 cursor-pointer" onClick={() => handleImageClick(selectedObservation.image)} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                   </div>
                 )}
                 <div className="text-sm text-gray-300">Type: {selectedObservation.type}</div>
@@ -1718,24 +1428,11 @@ const AstroObservationApp = () => {
                 {selectedObservation.distance && <div className="text-sm text-gray-300">Distance: {selectedObservation.distance} {selectedObservation.distanceUnit}</div>}
                 {selectedObservation.description && <div className="text-sm text-gray-400 mt-2">{selectedObservation.description}</div>}
                 {selectedObservation.favorite && <div className="text-yellow-400">⭐ Favorite</div>}
-                <button
-                  className="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded flex items-center space-x-2"
-                  onClick={() => { setEditObservationId(selectedObservation.id); setShowDetailModal(false); }}
-                  type="button"
-                >
+                <button className="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded flex items-center space-x-2" onClick={() => { setEditObservationId(selectedObservation.id); setShowDetailModal(false); }} type="button">
                   <Edit size={16} />
                   <span>Edit</span>
                 </button>
-                <button
-                  className="mt-4 bg-red-600 hover:bg-red-700 px-4 py-2 rounded flex items-center space-x-2"
-                  onClick={() => {
-                    if (window.confirm("Delete this observation?")) {
-                      setObservations(obs => obs.filter(o => o.id !== selectedObservation.id));
-                      setShowDetailModal(false);
-                    }
-                  }}
-                  type="button"
-                >
+                <button className="mt-4 bg-red-600 hover:bg-red-700 px-4 py-2 rounded flex items-center space-x-2" onClick={() => { if (window.confirm("Delete this observation?")) { setObservations(obs => obs.filter(o => o.id !== selectedObservation.id)); setShowDetailModal(false); } }} type="button">
                   <X size={16} />
                   <span>Delete</span>
                 </button>
@@ -1744,10 +1441,15 @@ const AstroObservationApp = () => {
           </div>
         )}
 
-        {/* Success notification */}
         {showSuccess && (
           <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
             ✅ Observation added successfully
+          </div>
+        )}
+
+        {notification && (
+          <div className={`fixed bottom-16 right-4 px-4 py-2 rounded-lg shadow-lg text-white ${notification.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
+            {notification.type === 'error' ? '⚠️' : '✅'} {notification.message}
           </div>
         )}
       </div>
