@@ -1207,7 +1207,7 @@ const AstroObservationApp = () => {
                         <a href={`https://heavens-above.com/PassSummary.aspx?satid=25544&lat=${userLocation.lat}&lng=${userLocation.lng}&loc=MyLocation&alt=0&tz=UCT`} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-medium">
                           🔍 Heavens Above — Pass times
                         </a>
-                        <a href={`https://spotthestation.nasa.gov/sightings/view.cfm?country=Portugal`} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-lg font-medium">
+                        <a href={`https://spotthestation.nasa.gov/`} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-lg font-medium">
                           🚀 NASA Spot the Station
                         </a>
                         <a href={`https://www.n2yo.com/satellite/?s=25544`} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-gray-600 hover:bg-gray-500 px-4 py-3 rounded-lg font-medium">
@@ -1261,7 +1261,7 @@ const AstroObservationApp = () => {
                       <text x="177" y="10" fill="white" fontSize="5" opacity="0.5">0°</text>
                       <rect x="0" y={90-51.6} width="360" height={103.2} fill="#00ff88" opacity="0.04" />
                       {issHistory.length > 1 && (() => {
-                        const pts = issHistory.map(p => `${((p.lng % 360 + 360) % 360).toFixed(1)},${(90 - p.lat).toFixed(1)}`);
+                        const pts = issHistory.map(p => `${(p.lng + 180).toFixed(1)},${(90 - p.lat).toFixed(1)}`);
                         return <polyline points={pts.join(' ')} fill="none" stroke="#00ff88" strokeWidth="1.5" strokeOpacity="0.5" strokeLinecap="round" strokeLinejoin="round" />;
                       })()}
                       {issHistory.length >= 2 && (() => {
@@ -1273,15 +1273,15 @@ const AstroObservationApp = () => {
                           lat: last.lat + dLat * (i + 1),
                           lng: last.lng + dLng * (i + 1)
                         }));
-                        const pts = predicted.map(p => `${((p.lng % 360 + 360) % 360).toFixed(1)},${(90 - p.lat).toFixed(1)}`);
+                        const pts = predicted.map(p => `${(p.lng + 180).toFixed(1)},${(90 - p.lat).toFixed(1)}`);
                         return <polyline points={pts.join(' ')} fill="none" stroke="#00ff88" strokeWidth="1" strokeOpacity="0.25" strokeDasharray="3,3" />;
                       })()}
                       {issHistory.length >= 2 && (() => {
                         const last = issHistory[issHistory.length - 1];
                         const prev = issHistory[issHistory.length - 2];
-                        const x = ((last.lng % 360 + 360) % 360);
+                        const x = (last.lng + 180);
                         const y = 90 - last.lat;
-                        const px = ((prev.lng % 360 + 360) % 360);
+                        const px = (prev.lng + 180);
                         const py = 90 - prev.lat;
                         const angle = Math.atan2(y - py, x - px) * 180 / Math.PI;
                         return <polygon points="-5,-3 5,0 -5,3" fill="#00ff88" opacity="0.9" transform={`translate(${x},${y}) rotate(${angle})`} />;
@@ -1294,11 +1294,11 @@ const AstroObservationApp = () => {
                       )}
                       {issData && (
                         <g>
-                          <circle cx={((issData.longitude % 360 + 360) % 360)} cy={90-issData.latitude} r="14" fill="none" stroke="#00ff8835" strokeWidth="1" strokeDasharray="3,2" />
-                          <circle cx={((issData.longitude % 360 + 360) % 360)} cy={90-issData.latitude} r="5" fill="#00ff88" stroke="white" strokeWidth="1.5">
+                          <circle cx={issData.longitude + 180} cy={90-issData.latitude} r="14" fill="none" stroke="#00ff8835" strokeWidth="1" strokeDasharray="3,2" />
+                          <circle cx={issData.longitude + 180} cy={90-issData.latitude} r="5" fill="#00ff88" stroke="white" strokeWidth="1.5">
                             <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" />
                           </circle>
-                          <text x={((issData.longitude % 360 + 360) % 360) + 8} y={90-issData.latitude+3} fill="#00ff88" fontSize="6" fontWeight="bold">ISS</text>
+                          <text x={issData.longitude + 180 + 8} y={90-issData.latitude+3} fill="#00ff88" fontSize="6" fontWeight="bold">ISS</text>
                         </g>
                       )}
                     </svg>
