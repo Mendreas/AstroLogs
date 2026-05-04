@@ -1239,18 +1239,27 @@ const AstroObservationApp = () => {
                   })()}
                   <div style={{ position: 'relative', width: '100%' }}>
                     <svg viewBox="0 0 360 180" style={{ width: '100%', borderRadius: 8, border: '1px solid #2a4a6a', display: 'block' }}>
-                      <rect width="360" height="180" fill="#0d2137" />
+                      {/* World map background — NASA Blue Marble, equirectangular projection */}
+                      <image
+                        href="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Whole_world_-_land_and_oceans_12000.jpg/1280px-Whole_world_-_land_and_oceans_12000.jpg"
+                        x="0" y="0" width="360" height="180"
+                        preserveAspectRatio="none"
+                        opacity="0.75"
+                      />
+                      {/* Dark overlay to keep text readable */}
+                      <rect width="360" height="180" fill="#000820" opacity="0.35" />
+                      {/* Grid lines */}
                       {[-60,-30,0,30,60].map(lat => (
-                        <line key={lat} x1="0" y1={90-lat} x2="360" y2={90-lat} stroke="#1a3a5a" strokeWidth={lat===0 ? 1 : 0.5} />
+                        <line key={lat} x1="0" y1={90-lat} x2="360" y2={90-lat} stroke="#ffffff" strokeWidth={lat===0 ? 0.8 : 0.3} strokeOpacity="0.2" />
                       ))}
                       {[-120,-60,0,60,120].map(lon => (
-                        <line key={lon} x1={lon+180} y1="0" x2={lon+180} y2="180" stroke="#1a3a5a" strokeWidth="0.5" />
+                        <line key={lon} x1={lon+180} y1="0" x2={lon+180} y2="180" stroke="#ffffff" strokeWidth="0.3" strokeOpacity="0.2" />
                       ))}
-                      <text x="3" y="93" fill="#4a7a9a" fontSize="6">0°</text>
-                      <text x="3" y="33" fill="#4a7a9a" fontSize="5">60°N</text>
-                      <text x="3" y="153" fill="#4a7a9a" fontSize="5">60°S</text>
-                      <text x="177" y="10" fill="#4a7a9a" fontSize="5">0°</text>
-                      <rect x="0" y={90-51.6} width="360" height={103.2} fill="#00aa5508" />
+                      <text x="3" y="93" fill="white" fontSize="6" opacity="0.5">0°</text>
+                      <text x="3" y="33" fill="white" fontSize="5" opacity="0.5">60°N</text>
+                      <text x="3" y="153" fill="white" fontSize="5" opacity="0.5">60°S</text>
+                      <text x="177" y="10" fill="white" fontSize="5" opacity="0.5">0°</text>
+                      <rect x="0" y={90-51.6} width="360" height={103.2} fill="#00ff88" opacity="0.04" />
                       {issHistory.length > 1 && (() => {
                         const pts = issHistory.map(p => `${((p.lng % 360 + 360) % 360).toFixed(1)},${(90 - p.lat).toFixed(1)}`);
                         return <polyline points={pts.join(' ')} fill="none" stroke="#00ff88" strokeWidth="1.5" strokeOpacity="0.5" strokeLinecap="round" strokeLinejoin="round" />;
