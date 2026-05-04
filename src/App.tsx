@@ -26,6 +26,14 @@ function seeingLabel(v: string) {
   return labels[n] || '';
 }
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 function transparencyLabel(v: string) {
   const n = parseInt(v);
   if (!n) return '';
@@ -285,6 +293,7 @@ const AstroObservationApp = () => {
   const [issData, setIssData] = useState<ISSData | null>(null);
   const [issLoading, setIssLoading] = useState(false);
   const [issAboveHorizon, setIssAboveHorizon] = useState(false);
+  const [issHistory, setIssHistory] = useState<{lat: number, lng: number}[]>([]);
 
   const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
     setNotification({ message, type });
@@ -382,6 +391,7 @@ const AstroObservationApp = () => {
         const latDiff = Math.abs(data.latitude - userLocation.lat);
         const lonDiff = Math.abs(data.longitude - userLocation.lng);
         setIssAboveHorizon(latDiff < 20 && lonDiff < 30);
+        setIssHistory(prev => [...prev.slice(-50), {lat: data.latitude, lng: data.longitude}]);
       } catch {
         try {
           const res2 = await fetch('https://api.open-notify.org/iss-now.json');
@@ -1211,6 +1221,22 @@ const AstroObservationApp = () => {
                 {/* Live map — built-in SVG, no external dependencies */}
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-bold mb-4">🗺️ Live ISS Position Map</h3>
+                  {/* Distance & approach info */}
+                  {issData && issHistory.length >= 2 && (() => {
+                    const distNow = haversineKm(userLocation.lat, userLocation.lng, issData.latitude, issData.longitude);
+                    const prev = issHistory[issHistory.length - 2];
+                    const distPrev = haversineKm(userLocation.lat, userLocation.lng, prev.lat, prev.lng);
+                    const approaching = distNow < distPrev;
+                    const speedKmMin = Math.abs(distPrev - distNow) * 6;
+                    return (
+                      <div className="mb-3 flex flex-wrap gap-4 text-sm">
+                        <span className="text-gray-300">📏 Distance: <strong className="text-blue-300">{Math.round(distNow).toLocaleString()} km</strong></span>
+                        <span className={approaching ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
+                          {approaching ? '▲ Approaching' : '▼ Receding'} ({speedKmMin.toFixed(0)} km/min)
+                        </span>
+                      </div>
+                    );
+                  })()}
                   <div style={{ position: 'relative', width: '100%' }}>
                     <svg viewBox="0 0 360 180" style={{ width: '100%', borderRadius: 8, border: '1px solid #2a4a6a', display: 'block' }}>
                       <rect width="360" height="180" fill="#0d2137" />
@@ -1225,6 +1251,32 @@ const AstroObservationApp = () => {
                       <text x="3" y="153" fill="#4a7a9a" fontSize="5">60°S</text>
                       <text x="177" y="10" fill="#4a7a9a" fontSize="5">0°</text>
                       <rect x="0" y={90-51.6} width="360" height={103.2} fill="#00aa5508" />
+                      {issHistory.length > 1 && (() => {
+                        const pts = issHistory.map(p => `${((p.lng % 360 + 360) % 360).toFixed(1)},${(90 - p.lat).toFixed(1)}`);
+                        return <polyline points={pts.join(' ')} fill="none" stroke="#00ff88" strokeWidth="1.5" strokeOpacity="0.5" strokeLinecap="round" strokeLinejoin="round" />;
+                      })()}
+                      {issHistory.length >= 2 && (() => {
+                        const last = issHistory[issHistory.length - 1];
+                        const prev = issHistory[issHistory.length - 2];
+                        const dLat = last.lat - prev.lat;
+                        const dLng = last.lng - prev.lng;
+                        const predicted = Array.from({length: 30}, (_, i) => ({
+                          lat: last.lat + dLat * (i + 1),
+                          lng: last.lng + dLng * (i + 1)
+                        }));
+                        const pts = predicted.map(p => `${((p.lng % 360 + 360) % 360).toFixed(1)},${(90 - p.lat).toFixed(1)}`);
+                        return <polyline points={pts.join(' ')} fill="none" stroke="#00ff88" strokeWidth="1" strokeOpacity="0.25" strokeDasharray="3,3" />;
+                      })()}
+                      {issHistory.length >= 2 && (() => {
+                        const last = issHistory[issHistory.length - 1];
+                        const prev = issHistory[issHistory.length - 2];
+                        const x = ((last.lng % 360 + 360) % 360);
+                        const y = 90 - last.lat;
+                        const px = ((prev.lng % 360 + 360) % 360);
+                        const py = 90 - prev.lat;
+                        const angle = Math.atan2(y - py, x - px) * 180 / Math.PI;
+                        return <polygon points="-5,-3 5,0 -5,3" fill="#00ff88" opacity="0.9" transform={`translate(${x},${y}) rotate(${angle})`} />;
+                      })()}
                       {userLocation && (
                         <g>
                           <circle cx={userLocation.lng+180} cy={90-userLocation.lat} r="4" fill="#ff4444" stroke="white" strokeWidth="1.2" />
@@ -1233,22 +1285,24 @@ const AstroObservationApp = () => {
                       )}
                       {issData && (
                         <g>
-                          <circle cx={((issData.longitude % 360) + 360) % 360} cy={90-issData.latitude} r="14" fill="none" stroke="#00ff8830" strokeWidth="1" strokeDasharray="3,2" />
-                          <circle cx={((issData.longitude % 360) + 360) % 360} cy={90-issData.latitude} r="5" fill="#00ff88" stroke="white" strokeWidth="1.5">
+                          <circle cx={((issData.longitude % 360 + 360) % 360)} cy={90-issData.latitude} r="14" fill="none" stroke="#00ff8835" strokeWidth="1" strokeDasharray="3,2" />
+                          <circle cx={((issData.longitude % 360 + 360) % 360)} cy={90-issData.latitude} r="5" fill="#00ff88" stroke="white" strokeWidth="1.5">
                             <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" />
                           </circle>
-                          <text x={((issData.longitude % 360) + 360) % 360 + 8} y={90-issData.latitude+3} fill="#00ff88" fontSize="6" fontWeight="bold">ISS</text>
+                          <text x={((issData.longitude % 360 + 360) % 360) + 8} y={90-issData.latitude+3} fill="#00ff88" fontSize="6" fontWeight="bold">ISS</text>
                         </g>
                       )}
                     </svg>
-                    <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-400">
-                      <span><span className="text-green-400">●</span> ISS (updates every 10s)</span>
-                      <span><span className="text-red-400">●</span> Your location</span>
-                      <span style={{color:'#00aa55'}}>▬</span><span> ISS orbital band</span>
+                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-400">
+                      <span><span className="text-green-400">●</span> ISS</span>
+                      <span><span className="text-red-400">●</span> You</span>
+                      <span><span className="text-green-600">──</span> Trail</span>
+                      <span><span className="text-green-900">╌╌</span> Predicted (~5 min)</span>
+                      <span>▶ Direction</span>
                     </div>
                     {issData && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Position: {issData.latitude.toFixed(2)}°, {issData.longitude.toFixed(2)}° &nbsp;·&nbsp; Alt: {issData.altitude.toFixed(0)} km &nbsp;·&nbsp; {issData.velocity.toFixed(0)} km/h
+                        {issData.latitude.toFixed(2)}°, {issData.longitude.toFixed(2)}° · Alt: {issData.altitude.toFixed(0)} km · {issData.velocity.toFixed(0)} km/h
                       </p>
                     )}
                   </div>
