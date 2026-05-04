@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "AstroLogs",
+  "name": "AstroLogs — Diário de Observação",
+  "description": "Regista as tuas observações astronómicas, rastreia a ISS e Tiangong, e explora o céu.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +11,24 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "any",
+  "theme_color": "#0a0a1a",
+  "background_color": "#0a0a1a",
+  "categories": ["education", "lifestyle"],
+  "lang": "pt",
+  "scope": "/AstroLogs/",
+  "start_url": "/AstroLogs/",
+  "screenshots": []
 }
