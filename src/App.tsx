@@ -376,15 +376,20 @@ const AstroObservationApp = () => {
       setIssLoading(true);
       try {
         const res = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+        if (!res.ok) throw new Error('primary API failed');
         const data: ISSData = await res.json();
         setIssData(data);
-        // Check if ISS is above horizon from user location
-        const observer = new Observer(userLocation.lat, userLocation.lng, 0);
-        const issRa = data.longitude < 0 ? data.longitude + 360 : data.longitude;
-        const hor = Horizon(new Date(data.timestamp * 1000), observer, issRa, data.latitude, "normal");
-        setIssAboveHorizon(hor.altitude > 10);
+        const latDiff = Math.abs(data.latitude - userLocation.lat);
+        const lonDiff = Math.abs(data.longitude - userLocation.lng);
+        setIssAboveHorizon(latDiff < 20 && lonDiff < 30);
       } catch {
-        // silent fail
+        try {
+          const res2 = await fetch('https://api.open-notify.org/iss-now.json');
+          const d2 = await res2.json();
+          if (d2.iss_position) {
+            setIssData({ latitude: parseFloat(d2.iss_position.latitude), longitude: parseFloat(d2.iss_position.longitude), altitude: 408, velocity: 27600, visibility: 'unknown', footprint: 0, timestamp: d2.timestamp });
+          }
+        } catch { /* both APIs failed */ }
       }
       setIssLoading(false);
     };
@@ -1149,7 +1154,8 @@ const AstroObservationApp = () => {
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold flex items-center gap-2"><Radio size={24} /> ISS Tracker</h2>
 
-                {issLoading && !issData && <div className="text-gray-400">Fetching ISS position...</div>}
+                {issLoading && !issData && <div className="text-gray-400 animate-pulse">📡 Fetching ISS position...</div>}
+                {!issLoading && !issData && <div className="bg-yellow-900 text-yellow-200 rounded p-3 text-sm">⚠️ Could not reach ISS tracking API. Check your connection and try again.</div>}
 
                 {issData && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1202,20 +1208,55 @@ const AstroObservationApp = () => {
                   </div>
                 )}
 
-                {/* Live map embed */}
+                {/* Live map — built-in SVG, no external dependencies */}
                 <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">🗺️ Live ISS Map</h3>
-                  <iframe
-                    src="https://www.n2yo.com/widget/?s=25544&t=ISS&c=00000&i=1"
-                    width="100%"
-                    height="400"
-                    frameBorder="0"
-                    scrolling="no"
-                    title="ISS Live Map"
-                    className="rounded"
-                    style={{ border: '1px solid #444', minHeight: 300 }}
-                  />
-                  <p className="text-xs text-gray-500 mt-2">Source: N2YO.com</p>
+                  <h3 className="text-lg font-bold mb-4">🗺️ Live ISS Position Map</h3>
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <svg viewBox="0 0 360 180" style={{ width: '100%', borderRadius: 8, border: '1px solid #2a4a6a', display: 'block' }}>
+                      <rect width="360" height="180" fill="#0d2137" />
+                      {[-60,-30,0,30,60].map(lat => (
+                        <line key={lat} x1="0" y1={90-lat} x2="360" y2={90-lat} stroke="#1a3a5a" strokeWidth={lat===0 ? 1 : 0.5} />
+                      ))}
+                      {[-120,-60,0,60,120].map(lon => (
+                        <line key={lon} x1={lon+180} y1="0" x2={lon+180} y2="180" stroke="#1a3a5a" strokeWidth="0.5" />
+                      ))}
+                      <text x="3" y="93" fill="#4a7a9a" fontSize="6">0°</text>
+                      <text x="3" y="33" fill="#4a7a9a" fontSize="5">60°N</text>
+                      <text x="3" y="153" fill="#4a7a9a" fontSize="5">60°S</text>
+                      <text x="177" y="10" fill="#4a7a9a" fontSize="5">0°</text>
+                      <rect x="0" y={90-51.6} width="360" height={103.2} fill="#00aa5508" />
+                      {userLocation && (
+                        <g>
+                          <circle cx={userLocation.lng+180} cy={90-userLocation.lat} r="4" fill="#ff4444" stroke="white" strokeWidth="1.2" />
+                          <text x={userLocation.lng+186} y={90-userLocation.lat+4} fill="#ffaaaa" fontSize="5">You</text>
+                        </g>
+                      )}
+                      {issData && (
+                        <g>
+                          <circle cx={((issData.longitude % 360) + 360) % 360} cy={90-issData.latitude} r="14" fill="none" stroke="#00ff8830" strokeWidth="1" strokeDasharray="3,2" />
+                          <circle cx={((issData.longitude % 360) + 360) % 360} cy={90-issData.latitude} r="5" fill="#00ff88" stroke="white" strokeWidth="1.5">
+                            <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" />
+                          </circle>
+                          <text x={((issData.longitude % 360) + 360) % 360 + 8} y={90-issData.latitude+3} fill="#00ff88" fontSize="6" fontWeight="bold">ISS</text>
+                        </g>
+                      )}
+                    </svg>
+                    <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-400">
+                      <span><span className="text-green-400">●</span> ISS (updates every 10s)</span>
+                      <span><span className="text-red-400">●</span> Your location</span>
+                      <span style={{color:'#00aa55'}}>▬</span><span> ISS orbital band</span>
+                    </div>
+                    {issData && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Position: {issData.latitude.toFixed(2)}°, {issData.longitude.toFixed(2)}° &nbsp;·&nbsp; Alt: {issData.altitude.toFixed(0)} km &nbsp;·&nbsp; {issData.velocity.toFixed(0)} km/h
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-3 mt-3 flex-wrap">
+                    <a href={`https://heavens-above.com/PassSummary.aspx?satid=25544&lat=${userLocation.lat}&lng=${userLocation.lng}&loc=MyLocation&alt=0&tz=UCT`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">📅 Pass times (Heavens Above)</a>
+                    <span className="text-gray-600">·</span>
+                    <a href="https://www.n2yo.com/satellite/?s=25544" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">🗺️ Full 3D Tracker (N2YO)</a>
+                  </div>
                 </div>
               </div>
             )}
