@@ -281,6 +281,8 @@ const AstroObservationApp = () => {
   const [events, setEvents] = useState<EventType[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [isIphone, setIsIphone] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   // Wishlist
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
@@ -320,6 +322,17 @@ const AstroObservationApp = () => {
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const check = () => {
+      setIsMobile(window.innerWidth < 768);
+      setIsIphone(/iphone|ipad|ipod|android/i.test(navigator.userAgent));
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
   // Register service worker for PWA (offline + installable)
@@ -748,6 +761,9 @@ const AstroObservationApp = () => {
     { id: 'solar',    label: 'Solar',       icon: '🪐' },
     { id: 'settings', label: 'Settings',    icon: '⚙️' },
   ];
+  // Mobile bottom nav: 4 primary + "More" button
+  const primaryTabs = ['home', 'objects', 'iss', 'calendar'];
+  const moreTabs = tabs.filter(t => !primaryTabs.includes(t.id));
 
   return (
     <div style={{ position: 'relative' }}>
@@ -803,24 +819,26 @@ const AstroObservationApp = () => {
             </div>
           </header>
 
-          {/* Nav — scrollable on mobile */}
-          <nav style={{ paddingLeft: 10, paddingRight: 10, overflowX: 'auto' }} className="border-t border-gray-700">
-            <div className="flex" style={{ minWidth: 'max-content' }}>
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-3 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab.id ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-300 hover:text-gray-200'}`}
-                >
-                  <span className="mr-1">{tab.icon}</span>
-                  {!isIphone && tab.label}
-                </button>
-              ))}
-            </div>
-          </nav>
+          {/* Nav — desktop: horizontal scroll | mobile: hidden (bottom bar below) */}
+          {!isMobile && (
+            <nav style={{ paddingLeft: 10, paddingRight: 10, overflowX: 'auto' }} className="border-t border-gray-700">
+              <div className="flex" style={{ minWidth: 'max-content' }}>
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-4 px-3 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab.id ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-300 hover:text-gray-200'}`}
+                  >
+                    <span className="mr-1">{tab.icon}</span>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </nav>
+          )}
 
-          {/* Main content */}
-          <main className="w-full px-4 py-6" style={{ maxWidth: 1600, margin: '0 auto' }}>
+          {/* Main content — extra bottom padding on mobile to clear the bottom nav */}
+          <main className="w-full px-4 py-6" style={{ maxWidth: 1600, margin: '0 auto', paddingBottom: isMobile ? 80 : 24 }}>
 
             {/* ── HOME ────────────────────────────────────────────────── */}
             {activeTab === 'home' && (
@@ -1582,10 +1600,53 @@ const AstroObservationApp = () => {
             {activeTab === 'solar' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold flex items-center gap-2">🪐 Solar System</h2>
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <iframe src="https://www.solarsystemscope.com/iframe" width="100%" height="600" style={{ minWidth: 300, minHeight: 400, border: "2px solid #0f5c6e", borderRadius: 8 }} title="Solar System Scope" frameBorder="0" allowFullScreen />
-                  <div className="text-xs text-gray-400 mt-2">Source: <a href="https://www.solarsystemscope.com" target="_blank" rel="noopener noreferrer" className="text-blue-400">Solar System Scope</a></div>
-                </div>
+                {isMobile ? (
+                  /* Mobile: iframe not supported on iOS — show cards + link */
+                  <div className="space-y-4">
+                    <div className="bg-gray-800 rounded-lg p-6 text-center space-y-4">
+                      <div className="text-6xl">🪐</div>
+                      <p className="text-gray-300">O simulador 3D do Sistema Solar não funciona em iframe no iPhone/Android.</p>
+                      <a href="https://www.solarsystemscope.com" target="_blank" rel="noopener noreferrer"
+                        className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl text-lg">
+                        🌍 Abrir Solar System Scope no browser
+                      </a>
+                      <a href="https://eyes.nasa.gov/apps/solar-system/" target="_blank" rel="noopener noreferrer"
+                        className="block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl text-lg">
+                        🚀 NASA Eyes on the Solar System
+                      </a>
+                      <a href="https://stellarium-web.org" target="_blank" rel="noopener noreferrer"
+                        className="block w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-6 rounded-xl text-lg">
+                        ✨ Stellarium Web (Planetário)
+                      </a>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { name: 'Mercúrio', icon: '⚫', dist: '0.39 UA', period: '88 dias', info: 'O mais próximo do Sol' },
+                        { name: 'Vénus', icon: '🟡', dist: '0.72 UA', period: '225 dias', info: 'O mais quente (462°C)' },
+                        { name: 'Terra', icon: '🔵', dist: '1.00 UA', period: '365 dias', info: 'O nosso planeta' },
+                        { name: 'Marte', icon: '🔴', dist: '1.52 UA', period: '687 dias', info: 'O Planeta Vermelho' },
+                        { name: 'Júpiter', icon: '🟠', dist: '5.20 UA', period: '12 anos', info: 'O maior planeta' },
+                        { name: 'Saturno', icon: '🪐', dist: '9.58 UA', period: '29 anos', info: 'Com os seus anéis' },
+                        { name: 'Urano', icon: '🩵', dist: '19.2 UA', period: '84 anos', info: 'Rodando de lado' },
+                        { name: 'Neptuno', icon: '💙', dist: '30.1 UA', period: '165 anos', info: 'O mais ventoso' },
+                      ].map(planet => (
+                        <div key={planet.name} className="bg-gray-800 rounded-lg p-3 text-center">
+                          <div className="text-3xl mb-1">{planet.icon}</div>
+                          <div className="font-bold text-sm">{planet.name}</div>
+                          <div className="text-xs text-gray-400">{planet.dist}</div>
+                          <div className="text-xs text-blue-400">{planet.period}</div>
+                          <div className="text-xs text-gray-500 mt-1">{planet.info}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* Desktop: iframe works fine */
+                  <div className="bg-gray-800 rounded-lg p-6">
+                    <iframe src="https://www.solarsystemscope.com/iframe" width="100%" height="600" style={{ minWidth: 300, minHeight: 400, border: "2px solid #0f5c6e", borderRadius: 8 }} title="Solar System Scope" frameBorder="0" allowFullScreen={true} />
+                    <div className="text-xs text-gray-400 mt-2">Source: <a href="https://www.solarsystemscope.com" target="_blank" rel="noopener noreferrer" className="text-blue-400">Solar System Scope</a></div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1804,14 +1865,80 @@ const AstroObservationApp = () => {
 
         {/* ── Notifications ────────────────────────────────────────────── */}
         {showSuccess && (
-          <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+          <div className={`fixed right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 ${isMobile ? 'bottom-20' : 'bottom-4'}`}>
             ✅ Observation saved successfully
           </div>
         )}
         {notification && (
-          <div className={`fixed bottom-16 right-4 px-4 py-2 rounded-lg shadow-lg text-white z-50 ${notification.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
+          <div className={`fixed right-4 px-4 py-2 rounded-lg shadow-lg text-white z-50 ${isMobile ? 'bottom-24' : 'bottom-16'} ${notification.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
             {notification.type === 'error' ? '⚠️' : '✅'} {notification.message}
           </div>
+        )}
+
+        {/* ── Mobile Bottom Navigation Bar ──────────────────────────────── */}
+        {isMobile && (
+          <>
+            {/* "More" overlay menu */}
+            {showMoreMenu && (
+              <div
+                className="fixed inset-0 z-40"
+                style={{ background: 'rgba(0,0,0,0.6)' }}
+                onClick={() => setShowMoreMenu(false)}
+              >
+                <div
+                  className="absolute bottom-16 left-0 right-0 bg-gray-800 border-t border-gray-600 p-4"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className="grid grid-cols-3 gap-3">
+                    {moreTabs.map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => { setActiveTab(tab.id); setShowMoreMenu(false); }}
+                        className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl text-center transition-colors ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        <span className="text-2xl">{tab.icon}</span>
+                        <span className="text-xs font-medium">{tab.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom tab bar */}
+            <nav
+              className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-700"
+              style={{ background: '#1a1a2e', paddingBottom: 'env(safe-area-inset-bottom)' }}
+            >
+              <div className="flex justify-around items-center">
+                {tabs.filter(t => primaryTabs.includes(t.id)).map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setShowMoreMenu(false); }}
+                    className={`flex flex-col items-center gap-0.5 py-2 px-3 min-w-0 flex-1 transition-colors ${activeTab === tab.id ? 'text-blue-400' : 'text-gray-400'}`}
+                  >
+                    <span className="text-xl">{tab.icon}</span>
+                    <span className="text-xs truncate w-full text-center">{tab.label}</span>
+                  </button>
+                ))}
+                {/* "More" button */}
+                <button
+                  onClick={() => setShowMoreMenu(m => !m)}
+                  className={`flex flex-col items-center gap-0.5 py-2 px-3 min-w-0 flex-1 transition-colors ${moreTabs.some(t => t.id === activeTab) ? 'text-blue-400' : 'text-gray-400'}`}
+                >
+                  <span className="text-xl">
+                    {moreTabs.find(t => t.id === activeTab)?.icon ?? '⋯'}
+                  </span>
+                  <span className="text-xs">
+                    {moreTabs.find(t => t.id === activeTab)?.label ?? 'More'}
+                  </span>
+                </button>
+              </div>
+            </nav>
+
+            {/* Spacer so content isn't hidden behind bottom nav */}
+            <div style={{ height: 64 }} />
+          </>
         )}
       </div>
     </div>
