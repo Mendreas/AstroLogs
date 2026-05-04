@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/AstroLogs/static/css/main.cc89ea75.css",
-    "main.js": "/AstroLogs/static/js/main.04edb02c.js",
+    "main.css": "/AstroLogs/static/css/main.1e75c90a.css",
+    "main.js": "/AstroLogs/static/js/main.b1466f9d.js",
     "static/js/453.ce413981.chunk.js": "/AstroLogs/static/js/453.ce413981.chunk.js",
     "index.html": "/AstroLogs/index.html",
-    "main.cc89ea75.css.map": "/AstroLogs/static/css/main.cc89ea75.css.map",
-    "main.04edb02c.js.map": "/AstroLogs/static/js/main.04edb02c.js.map",
+    "main.1e75c90a.css.map": "/AstroLogs/static/css/main.1e75c90a.css.map",
+    "main.b1466f9d.js.map": "/AstroLogs/static/js/main.b1466f9d.js.map",
     "453.ce413981.chunk.js.map": "/AstroLogs/static/js/453.ce413981.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.cc89ea75.css",
-    "static/js/main.04edb02c.js"
+    "static/css/main.1e75c90a.css",
+    "static/js/main.b1466f9d.js"
   ]
 }
