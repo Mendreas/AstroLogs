@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapPin, Plus, Star, Download, Upload, Save, X, Eye, Sun, Edit } from 'lucide-react';
+import { MapPin, Plus, Star, Download, Upload, Save, X, Eye, Sun, Edit, Search, BarChart2, BookmarkPlus, Radio, Trash2 } from 'lucide-react';
 import { Body, Observer, Equator, Horizon, MoonPhase } from "astronomy-engine";
 import EventList from "./components/EventList";
 import { EventType } from "./components/EventCard";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function moonPhaseName(phase: number) {
   if (phase < 0.03 || phase > 0.97) return "New Moon";
@@ -17,7 +19,81 @@ function moonPhaseName(phase: number) {
   return "Waning Crescent";
 }
 
-// Types for observations and celestial objects
+function seeingLabel(v: string) {
+  const n = parseInt(v);
+  if (!n) return '';
+  const labels = ['', 'Very Poor', 'Poor', 'Fair', 'Good', 'Excellent'];
+  return labels[n] || '';
+}
+
+function transparencyLabel(v: string) {
+  const n = parseInt(v);
+  if (!n) return '';
+  const labels = ['', 'Overcast', 'Mostly Cloudy', 'Partly Clear', 'Mostly Clear', 'Crystal Clear'];
+  return labels[n] || '';
+}
+
+function starsDisplay(val: string, max = 5) {
+  const n = parseInt(val) || 0;
+  return '★'.repeat(n) + '☆'.repeat(max - n);
+}
+
+// Image compression: resize to max 900px and convert to JPEG
+async function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSize = 900;
+        let { width, height } = img;
+        if (width > height && width > maxSize) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.78));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+const fetchBortleClass = async (lat: number, lon: number): Promise<string> => {
+  try {
+    const url = `https://www.lightpollutionmap.info/QueryRaster/?ql=wa_2015&x=${lon}&y=${lat}&z=8`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const sqm = data.value;
+    if (typeof sqm !== "number") return "Unknown";
+    if (sqm >= 21.99) return "Class 1 — Excellent dark-sky site";
+    if (sqm >= 21.89) return "Class 2 — Typical truly dark site";
+    if (sqm >= 21.69) return "Class 3 — Rural sky";
+    if (sqm >= 21.25) return "Class 4 — Rural/suburban transition";
+    if (sqm >= 20.49) return "Class 5 — Suburban sky";
+    if (sqm >= 19.50) return "Class 6 — Bright suburban sky";
+    if (sqm >= 18.94) return "Class 7 — Suburban/urban transition";
+    if (sqm >= 18.38) return "Class 8 — City sky";
+    return "Class 9 — Inner-city sky";
+  } catch {
+    return "Unknown";
+  }
+};
+
+const nominatimBase = 'https://nominatim.openstreetmap.org';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface Observation {
   id: number;
   name: string;
@@ -32,6 +108,19 @@ interface Observation {
   description: string;
   favorite: boolean;
   image: string;
+  dateAdded: string;
+  equipment: string;
+  eyepiece: string;
+  seeing: string;
+  transparency: string;
+}
+
+interface WishlistItem {
+  id: number;
+  name: string;
+  type: string;
+  priority: 'high' | 'medium' | 'low';
+  notes: string;
   dateAdded: string;
 }
 
@@ -58,48 +147,102 @@ interface LocationSuggestion {
   lon: string;
 }
 
-const fetchBortleClass = async (lat: number, lon: number): Promise<string> => {
-  try {
-    const url = `https://www.lightpollutionmap.info/QueryRaster/?ql=wa_2015&x=${lon}&y=${lat}&z=8`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const sqm = data.value;
-    if (typeof sqm !== "number") return "Unknown";
-    if (sqm >= 21.99) return "Class 1: Excellent dark-sky site";
-    if (sqm >= 21.89) return "Class 2: Typical truly dark site";
-    if (sqm >= 21.69) return "Class 3: Rural sky";
-    if (sqm >= 21.25) return "Class 4: Rural/suburban transition";
-    if (sqm >= 20.49) return "Class 5: Suburban sky";
-    if (sqm >= 19.50) return "Class 6: Bright suburban sky";
-    if (sqm >= 18.94) return "Class 7: Suburban/urban transition";
-    if (sqm >= 18.38) return "Class 8: City sky";
-    return "Class 9: Inner-city sky";
-  } catch {
-    return "Unknown";
-  }
-};
+interface ISSData {
+  latitude: number;
+  longitude: number;
+  altitude: number;
+  velocity: number;
+  visibility: string;
+  footprint: number;
+  timestamp: number;
+}
 
-const nominatimBase = 'https://nominatim.openstreetmap.org';
+// ─── Catalogs ────────────────────────────────────────────────────────────────
 
-const uploadToImgur = async (file: File) => {
-  const formData = new FormData();
-  formData.append("image", file);
+const brightStars = [
+  { name: "Sirius",       ra: 6.7525,  dec: -16.7161, magnitude: -1.46 },
+  { name: "Canopus",      ra: 6.3992,  dec: -52.6957, magnitude: -0.74 },
+  { name: "Arcturus",     ra: 14.2610, dec:  19.1822,  magnitude: -0.05 },
+  { name: "Vega",         ra: 18.6157, dec:  38.7836,  magnitude:  0.03 },
+  { name: "Capella",      ra: 5.2783,  dec:  45.9980,  magnitude:  0.08 },
+  { name: "Rigel",        ra: 5.2423,  dec:  -8.2017,  magnitude:  0.13 },
+  { name: "Procyon",      ra: 7.6553,  dec:   5.2250,  magnitude:  0.34 },
+  { name: "Betelgeuse",   ra: 5.9195,  dec:   7.4071,  magnitude:  0.42 },
+  { name: "Altair",       ra: 19.8463, dec:   8.8683,  magnitude:  0.77 },
+  { name: "Aldebaran",    ra: 4.5988,  dec:  16.5093,  magnitude:  0.85 },
+  { name: "Antares",      ra: 16.4901, dec: -26.4320,  magnitude:  0.96 },
+  { name: "Spica",        ra: 13.4199, dec: -11.1613,  magnitude:  0.98 },
+  { name: "Pollux",       ra: 7.7553,  dec:  28.0262,  magnitude:  1.14 },
+  { name: "Fomalhaut",    ra: 22.9608, dec: -29.6223,  magnitude:  1.16 },
+  { name: "Deneb",        ra: 20.6905, dec:  45.2803,  magnitude:  1.25 },
+  { name: "Regulus",      ra: 10.1395, dec:  11.9672,  magnitude:  1.35 },
+  { name: "Castor",       ra: 7.5769,  dec:  31.8883,  magnitude:  1.58 },
+  { name: "Bellatrix",    ra: 5.4188,  dec:   6.3497,  magnitude:  1.64 },
+  { name: "Elnath",       ra: 5.4382,  dec:  28.6075,  magnitude:  1.65 },
+  { name: "Alnilam",      ra: 5.6035,  dec:  -1.2019,  magnitude:  1.69 },
+  { name: "Alnitak",      ra: 5.6793,  dec:  -1.9425,  magnitude:  1.74 },
+  { name: "Mintaka",      ra: 5.5332,  dec:  -0.2991,  magnitude:  2.23 },
+  { name: "Dubhe",        ra: 11.0621, dec:  61.7511,  magnitude:  1.79 },
+  { name: "Mirfak",       ra: 3.4054,  dec:  49.8612,  magnitude:  1.79 },
+  { name: "Adhara",       ra: 6.9771,  dec: -28.9722,  magnitude:  1.50 },
+  { name: "Hamal",        ra: 2.1196,  dec:  23.4624,  magnitude:  2.00 },
+  { name: "Mizar",        ra: 13.3988, dec:  54.9254,  magnitude:  2.23 },
+  { name: "Alkaid",       ra: 13.7923, dec:  49.3133,  magnitude:  1.86 },
+  { name: "Merak",        ra: 11.0307, dec:  56.3824,  magnitude:  2.37 },
+  { name: "Phecda",       ra: 11.8976, dec:  53.6948,  magnitude:  2.44 },
+];
 
-  const response = await fetch("https://api.imgur.com/3/image", {
-    method: "POST",
-    headers: {
-      Authorization: `Client-ID ${process.env.REACT_APP_IMGUR_CLIENT_ID}`
-    },
-    body: formData
-  });
+const deepSkyObjects = [
+  // Galaxies
+  { name: "M31 (Andromeda Galaxy)",   type: "galaxy",  ra: 10.6847,   dec:  41.2692 },
+  { name: "M33 (Triangulum Galaxy)",  type: "galaxy",  ra: 23.4620,   dec:  30.6602 },
+  { name: "M51 (Whirlpool Galaxy)",   type: "galaxy",  ra: 202.4696,  dec:  47.1952 },
+  { name: "M63 (Sunflower Galaxy)",   type: "galaxy",  ra: 198.9556,  dec:  42.0294 },
+  { name: "M81 (Bode's Galaxy)",      type: "galaxy",  ra: 148.8882,  dec:  69.0653 },
+  { name: "M82 (Cigar Galaxy)",       type: "galaxy",  ra: 148.9696,  dec:  69.6797 },
+  { name: "M87 (Virgo A)",            type: "galaxy",  ra: 187.7059,  dec:  12.3911 },
+  { name: "M101 (Pinwheel Galaxy)",   type: "galaxy",  ra: 210.8023,  dec:  54.3489 },
+  { name: "M104 (Sombrero Galaxy)",   type: "galaxy",  ra: 189.9976,  dec: -11.6231 },
+  { name: "M64 (Black Eye Galaxy)",   type: "galaxy",  ra: 194.1821,  dec:  21.6830 },
+  { name: "M77",                      type: "galaxy",  ra: 40.6696,   dec:  -0.0133 },
+  { name: "M74",                      type: "galaxy",  ra: 24.1739,   dec:  15.7836 },
+  // Nebulae
+  { name: "M1 (Crab Nebula)",         type: "nebula",  ra: 83.6331,   dec:  22.0145 },
+  { name: "M8 (Lagoon Nebula)",       type: "nebula",  ra: 270.9208,  dec: -24.3833 },
+  { name: "M17 (Omega Nebula)",       type: "nebula",  ra: 275.1958,  dec: -16.1750 },
+  { name: "M20 (Trifid Nebula)",      type: "nebula",  ra: 270.6208,  dec: -23.0333 },
+  { name: "M27 (Dumbbell Nebula)",    type: "nebula",  ra: 299.9013,  dec:  22.7214 },
+  { name: "M42 (Orion Nebula)",       type: "nebula",  ra: 83.8221,   dec:  -5.3911 },
+  { name: "M43",                      type: "nebula",  ra: 83.8854,   dec:  -5.2675 },
+  { name: "M57 (Ring Nebula)",        type: "nebula",  ra: 283.3962,  dec:  33.0289 },
+  { name: "M76 (Little Dumbbell)",    type: "nebula",  ra: 25.5800,   dec:  51.5756 },
+  { name: "M97 (Owl Nebula)",         type: "nebula",  ra: 168.6996,  dec:  55.0190 },
+  { name: "M78",                      type: "nebula",  ra: 86.6754,   dec:   0.0681 },
+  // Clusters
+  { name: "M3",                       type: "cluster", ra: 205.5483,  dec:  28.3775 },
+  { name: "M5",                       type: "cluster", ra: 229.6383,  dec:   2.0817 },
+  { name: "M6 (Butterfly Cluster)",   type: "cluster", ra: 265.0833,  dec: -32.2167 },
+  { name: "M7",                       type: "cluster", ra: 268.4600,  dec: -34.8417 },
+  { name: "M11 (Wild Duck Cluster)",  type: "cluster", ra: 282.7667,  dec:  -6.2717 },
+  { name: "M13 (Hercules Cluster)",   type: "cluster", ra: 250.4230,  dec:  36.4610 },
+  { name: "M22",                      type: "cluster", ra: 279.1000,  dec: -23.9039 },
+  { name: "M35",                      type: "cluster", ra: 92.2667,   dec:  24.3333 },
+  { name: "M44 (Beehive Cluster)",    type: "cluster", ra: 130.0250,  dec:  19.9822 },
+  { name: "M45 (Pleiades)",           type: "cluster", ra: 56.8750,   dec:  24.1167 },
+  { name: "M47",                      type: "cluster", ra: 114.1500,  dec: -14.4833 },
+  { name: "M92",                      type: "cluster", ra: 259.2800,  dec:  43.1358 },
+  { name: "M15",                      type: "cluster", ra: 322.4930,  dec:  12.1670 },
+];
 
-  const data = await response.json();
-  if (data.success) {
-    return data.data.link;
-  } else {
-    throw new Error("Imgur upload failed");
-  }
-};
+const exoplanets = [
+  { name: "51 Pegasi b",    type: "exoplanet", ra: 344.366, dec:  20.768 },
+  { name: "HD 209458 b",    type: "exoplanet", ra: 330.794, dec:  18.884 },
+  { name: "55 Cancri e",    type: "exoplanet", ra: 133.149, dec:  28.330 },
+  { name: "WASP-12 b",      type: "exoplanet", ra: 97.637,  dec:  29.673 },
+  { name: "Kepler-452 b",   type: "exoplanet", ra: 292.167, dec:  44.322 },
+];
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 const AstroObservationApp = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -117,11 +260,6 @@ const AstroObservationApp = () => {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [showSuccess, setShowSuccess] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 4000);
-  };
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedObservation, setSelectedObservation] = useState<Observation | null>(null);
   const [calendarSelectedDay, setCalendarSelectedDay] = useState<number | null>(null);
@@ -135,44 +273,43 @@ const AstroObservationApp = () => {
   const [events, setEvents] = useState<EventType[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [isIphone, setIsIphone] = useState(false);
-
-  const exoplanets = [
-    { name: "51 Pegasi b", type: "exoplanet", ra: 344.366, dec: 20.768 },
-    { name: "HD 209458 b", type: "exoplanet", ra: 330.794, dec: 18.884 },
-  ];
-
-  const deepSkyObjects = [
-    { name: "M31 (Andromeda Galaxy)", type: "galaxy", ra: 10.6847, dec: 41.2692 },
-    { name: "M42 (Orion Nebula)", type: "nebula", ra: 83.8221, dec: -5.3911 },
-    { name: "M13 (Hercules Cluster)", type: "cluster", ra: 250.423, dec: 36.461 },
-  ];
-
-  const [formData, setFormData] = useState<Omit<Observation, 'id' | 'dateAdded'>>({
-    name: '',
-    type: 'star',
-    date: new Date().toISOString().split('T')[0],
-    location: '',
-    ra: '',
-    dec: '',
-    magnitude: '',
-    distance: '',
-    distanceUnit: 'ly',
-    description: '',
-    favorite: false,
-    image: ''
+  const [searchQuery, setSearchQuery] = useState('');
+  // Wishlist
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [showWishlistForm, setShowWishlistForm] = useState(false);
+  const [wishlistForm, setWishlistForm] = useState<Omit<WishlistItem, 'id' | 'dateAdded'>>({
+    name: '', type: 'star', priority: 'medium', notes: ''
   });
+  const [wishlistFilter, setWishlistFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  // ISS
+  const [issData, setIssData] = useState<ISSData | null>(null);
+  const [issLoading, setIssLoading] = useState(false);
+  const [issAboveHorizon, setIssAboveHorizon] = useState(false);
 
-  // Update current time every minute so sky objects stay accurate
+  const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const emptyForm: Omit<Observation, 'id' | 'dateAdded'> = {
+    name: '', type: 'star',
+    date: new Date().toISOString().split('T')[0],
+    location: '', ra: '', dec: '',
+    magnitude: '', distance: '', distanceUnit: 'ly',
+    description: '', favorite: false, image: '',
+    equipment: '', eyepiece: '', seeing: '', transparency: ''
+  };
+  const [formData, setFormData] = useState<Omit<Observation, 'id' | 'dateAdded'>>(emptyForm);
+
+  // ── Effects ───────────────────────────────────────────────────────────────
+
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // Calculate moon phase using astronomy-engine for accurate results
   useEffect(() => {
-    const angle = MoonPhase(currentTime); // 0-360: 0=New, 90=First Quarter, 180=Full, 270=Last Quarter
+    const angle = MoonPhase(currentTime);
     const fraction = angle / 360;
     const illumination = Math.round((1 - Math.cos((angle * Math.PI) / 180)) / 2 * 100);
     setMoonPhase({ phase: moonPhaseName(fraction), illumination });
@@ -185,262 +322,32 @@ const AstroObservationApp = () => {
   useEffect(() => {
     fetch(`${nominatimBase}/reverse?lat=${userLocation.lat}&lon=${userLocation.lng}&format=json`)
       .then(res => res.json())
-      .then(data => {
-        if (data && data.display_name) setPlaceName(data.display_name);
-      })
+      .then(data => { if (data?.display_name) setPlaceName(data.display_name); })
       .catch(() => setPlaceName('Unknown location'));
   }, [userLocation]);
 
-  const getLocationData = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.log('Location access denied');
-        }
-      );
-    }
-  };
+  useEffect(() => {
+    const saved = localStorage.getItem("observations");
+    if (saved) setObservations(JSON.parse(saved));
+    const savedWl = localStorage.getItem("wishlist");
+    if (savedWl) setWishlist(JSON.parse(savedWl));
+  }, []);
 
-  const handlePlaceInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPlaceInput(e.target.value);
-    if (e.target.value.length > 2) {
-      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(e.target.value)}&format=json&limit=5`)
-        .then(res => res.json())
-        .then(data => setLocationSuggestions(data));
-    } else {
-      setLocationSuggestions([]);
-    }
-  };
+  useEffect(() => {
+    localStorage.setItem("observations", JSON.stringify(observations));
+  }, [observations]);
 
-  const handleAddObservation = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) {
-      showNotification('Please enter an object name');
-      return;
-    }
-    if (editObservationId !== null) {
-      setObservations(obs =>
-        obs.map(o =>
-          o.id === editObservationId
-            ? { ...o, ...formData }
-            : o
-        )
-      );
-      setEditObservationId(null);
-    } else {
-      const newObservation: Observation = {
-        id: Date.now(),
-        ...formData,
-        dateAdded: new Date().toISOString()
-      };
-      setObservations([...observations, newObservation]);
-    }
-    setFormData({
-      name: '',
-      type: 'star',
-      date: new Date().toISOString().split('T')[0],
-      location: '',
-      ra: '',
-      dec: '',
-      magnitude: '',
-      distance: '',
-      distanceUnit: 'ly',
-      description: '',
-      favorite: false,
-      image: ''
-    });
-    setShowAddForm(false);
-    setShowSuccess(true);
-    setActiveTab('objects');
-    setTimeout(() => setShowSuccess(false), 3000);
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
-      try {
-        const imgurUrl = await uploadToImgur(file);
-        setFormData({ ...formData, image: imgurUrl });
-      } catch (err) {
-        showNotification(err instanceof Error ? "Image upload failed: " + err.message : "Image upload failed.");
-      }
-    }
-  };
-
-  const handleImageClick = (img: string) => {
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.write(`
-        <html>
-          <head>
-            <title>Observation Image</title>
-            <style>
-              body { background: #000; margin: 0; display: flex; flex-direction: column; align-items: center; }
-              .close-btn {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: #222;
-                color: #fff;
-                border: none;
-                border-radius: 8px;
-                padding: 10px 20px;
-                font-size: 18px;
-                cursor: pointer;
-                z-index: 1000;
-                opacity: 0.8;
-              }
-              .close-btn:hover { opacity: 1; }
-              img { max-width: 100vw; max-height: 100vh; display: block; margin: auto; }
-            </style>
-          </head>
-          <body>
-            <button class="close-btn" onclick="window.close()">Close ✕</button>
-            <img src="${img}" alt="Observation" />
-          </body>
-        </html>
-      `);
-      win.document.title = "Observation Image";
-    }
-  };
-
-  const navigateCalendar = (direction: string) => {
-    const newDate = new Date(calendarDate);
-    if (direction === 'prev') {
-      newDate.setMonth(newDate.getMonth() - 1);
-    } else {
-      newDate.setMonth(newDate.getMonth() + 1);
-    }
-    setCalendarDate(newDate);
-    setCalendarSelectedDay(null);
-  };
-
-  const getDaysInMonth = (date: Date): (number | null)[] => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-    const days: (number | null)[] = [];
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
-    }
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(day);
-    }
-    return days;
-  };
-
-  const exportObservations = () => {
-    const dataStr = JSON.stringify(observations, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    const exportFileDefaultName = `astro-observations-${new Date().toISOString().split('T')[0]}.json`;
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const imported = JSON.parse(event.target?.result as string);
-          if (Array.isArray(imported)) {
-            setObservations(imported);
-          } else {
-            showNotification('Invalid file format.');
-          }
-        } catch {
-          showNotification('Could not import file.');
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  const filteredObservations = observations.filter((obs) => {
-    const typeMatch = filterType === 'all' || obs.type === filterType;
-    const favoriteMatch = !showFavorites || obs.favorite;
-    return typeMatch && favoriteMatch;
-  });
-
-  const getObservationsForDay = (date: Date, day: number) => {
-    const yyyy = date.getFullYear();
-    const mm = (date.getMonth() + 1).toString().padStart(2, '0');
-    const dd = day.toString().padStart(2, '0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
-    return observations.filter(obs => obs.date === dateStr);
-  };
+  useEffect(() => {
+    localStorage.setItem("wishlist", JSON.stringify(wishlist));
+  }, [wishlist]);
 
   useEffect(() => {
     if (editObservationId !== null) {
       const obs = observations.find(o => o.id === editObservationId);
-      if (obs) {
-        setFormData({ ...obs });
-        setShowAddForm(true);
-      }
+      if (obs) { setFormData({ ...emptyForm, ...obs }); setShowAddForm(true); }
     }
     // eslint-disable-next-line
   }, [editObservationId]);
-
-  const planetNames = [
-    "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"
-  ];
-
-  function getVisiblePlanets(lat: number, lon: number, date: Date): CelestialObject[] {
-    const observer = new Observer(lat, lon, 0);
-    return planetNames.map(name => {
-      const body = Body[name as keyof typeof Body];
-      const eq = Equator(body, date, observer, true, true);
-      const hor = Horizon(date, observer, eq.ra, eq.dec, "normal");
-      return {
-        name,
-        type: "planet",
-        magnitude: 0,
-        constellation: "",
-        ra: eq.ra.toString(),
-        dec: eq.dec.toString(),
-        season: "",
-        bestTime: "",
-        altitude: hor.altitude
-      };
-    }).filter(obj => obj.altitude > 0);
-  }
-
-  const brightStars = [
-    { name: "Sirius", ra: 6.752, dec: -16.716 },
-    { name: "Vega", ra: 18.615, dec: 38.783 },
-  ];
-
-  function getVisibleBrightStars(lat: number, lon: number, date: Date): CelestialObject[] {
-    const observer = new Observer(lat, lon, 0);
-    return brightStars.map(star => {
-      const ra = star.ra * 15;
-      const dec = star.dec;
-      const hor = Horizon(date, observer, ra, dec, "normal");
-      return {
-        name: star.name,
-        type: "star",
-        magnitude: 0,
-        constellation: "",
-        ra: ra.toString(),
-        dec: dec.toString(),
-        season: "",
-        bestTime: "",
-        altitude: hor.altitude
-      };
-    }).filter(obj => obj.altitude > 0);
-  }
 
   useEffect(() => {
     if (userLocation.lat && userLocation.lng) {
@@ -448,55 +355,76 @@ const AstroObservationApp = () => {
       setVisiblePlanets(getVisiblePlanets(userLocation.lat, userLocation.lng, now));
       setVisibleStars(getVisibleBrightStars(userLocation.lat, userLocation.lng, now));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [userLocation, currentTime]);
 
-  function simbadUrl(name: string) {
-    return `http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(name)}`;
-  }
-  function wikipediaUrl(name: string) {
-    return `https://en.wikipedia.org/wiki/${encodeURIComponent(name.replace(/ /g, "_"))}`;
-  }
-  function nasaExoplanetUrl(name: string) {
-    return `https://exoplanetarchive.ipac.caltech.edu/cgi-bin/DisplayOverview/nph-DisplayOverview?objname=${encodeURIComponent(name)}`;
-  }
-  function jplSsdUrl(name: string) {
-    return `https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=${encodeURIComponent(name)}`;
+  useEffect(() => {
+    setVisibleObjectsNow(getAllVisibleObjects(userLocation.lat, userLocation.lng, currentTime));
+    // eslint-disable-next-line
+  }, [userLocation, currentTime]);
+
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    if (isIOS) document.body.classList.add('ios-device');
+    setIsIphone(/iPhone/.test(navigator.userAgent));
+  }, []);
+
+  // ISS polling every 10 seconds when on ISS tab
+  useEffect(() => {
+    if (activeTab !== 'iss') return;
+    const fetchISS = async () => {
+      setIssLoading(true);
+      try {
+        const res = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+        const data: ISSData = await res.json();
+        setIssData(data);
+        // Check if ISS is above horizon from user location
+        const observer = new Observer(userLocation.lat, userLocation.lng, 0);
+        const issRa = data.longitude < 0 ? data.longitude + 360 : data.longitude;
+        const hor = Horizon(new Date(data.timestamp * 1000), observer, issRa, data.latitude, "normal");
+        setIssAboveHorizon(hor.altitude > 10);
+      } catch {
+        // silent fail
+      }
+      setIssLoading(false);
+    };
+    fetchISS();
+    const interval = setInterval(fetchISS, 10000);
+    return () => clearInterval(interval);
+  }, [activeTab, userLocation]);
+
+  // Elfsight widget cleanup
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const el = document.querySelector('.fixed-translate-widget');
+      if (el) {
+        el.setAttribute('style', 'position:fixed !important; top:16px !important; right:24px !important; left:auto !important; z-index:10010 !important; background:transparent !important; margin:0 !important; width:auto !important;');
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // ── Astronomy helpers ─────────────────────────────────────────────────────
+
+  const planetNames = ["Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"];
+
+  function getVisiblePlanets(lat: number, lon: number, date: Date): CelestialObject[] {
+    const observer = new Observer(lat, lon, 0);
+    return planetNames.map(name => {
+      const body = Body[name as keyof typeof Body];
+      const eq = Equator(body, date, observer, true, true);
+      const hor = Horizon(date, observer, eq.ra, eq.dec, "normal");
+      return { name, type: "planet", magnitude: 0, constellation: "", ra: eq.ra.toFixed(2), dec: eq.dec.toFixed(2), season: "", bestTime: "", altitude: hor.altitude };
+    }).filter(obj => obj.altitude > 0);
   }
 
-  const visibleMessierObjects = deepSkyObjects
-    .filter(obj => isObjectVisible(obj.ra, obj.dec, userLocation.lat, userLocation.lng, currentTime))
-    .map(obj => ({
-      name: obj.name,
-      type: obj.type,
-      magnitude: 0,
-      constellation: '',
-      ra: obj.ra.toString(),
-      dec: obj.dec.toString(),
-      season: '',
-      bestTime: '',
-      displayType: 'Messier',
-      altitude: 0
-    }));
-
-  const allObjects: CelestialObject[] = [
-    ...visiblePlanets,
-    ...visibleStars,
-    ...visibleMessierObjects
-  ];
-
-  function getVisibleObjectsAtHour(lat: number, lon: number, baseDate: Date, hour: number) {
-    const date = new Date(baseDate);
-    date.setHours(hour, 0, 0, 0);
-    const planets = getVisiblePlanets(lat, lon, date);
-    const stars = getVisibleBrightStars(lat, lon, date);
-    const deepSky = deepSkyObjects.filter(obj =>
-      isObjectVisible(obj.ra, obj.dec, lat, lon, date)
-    );
-    const exos = exoplanets.filter(obj =>
-      isObjectVisible(obj.ra, obj.dec, lat, lon, date)
-    );
-    return planets.length + stars.length + deepSky.length + exos.length;
+  function getVisibleBrightStars(lat: number, lon: number, date: Date): CelestialObject[] {
+    const observer = new Observer(lat, lon, 0);
+    return brightStars.map(star => {
+      const ra = star.ra * 15;
+      const hor = Horizon(date, observer, ra, star.dec, "normal");
+      return { name: star.name, type: "star", magnitude: star.magnitude, constellation: "", ra: ra.toFixed(2), dec: star.dec.toFixed(2), season: "", bestTime: "", altitude: hor.altitude };
+    }).filter(obj => obj.altitude > 0);
   }
 
   function isObjectVisible(ra: number, dec: number, lat: number, lon: number, date: Date) {
@@ -505,72 +433,32 @@ const AstroObservationApp = () => {
     return hor.altitude > 0;
   }
 
-  useEffect(() => {
-    setVisibleObjectsNow(getAllVisibleObjects(userLocation.lat, userLocation.lng, currentTime));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userLocation, currentTime]);
-
-  function getAllVisibleObjects(lat: number, lon: number, date: Date) {
-    const planets = getVisiblePlanets(lat, lon, date).map(obj => ({
-      ...obj,
-      displayType: "Planet"
-    }));
-    const stars = getVisibleBrightStars(lat, lon, date).map(obj => ({
-      ...obj,
-      displayType: "Star"
-    }));
-    const messier: VisibleObject[] = deepSkyObjects
-      .filter(obj => isObjectVisible(obj.ra, obj.dec, lat, lon, date))
-      .map(obj => ({
-        name: obj.name,
-        type: obj.type,
-        magnitude: 0,
-        constellation: '',
-        ra: obj.ra.toString(),
-        dec: obj.dec.toString(),
-        season: '',
-        bestTime: '',
-        altitude: 0,
-        displayType: "Messier",
-      }));
-    const exos: VisibleObject[] = exoplanets
-      .filter(obj => isObjectVisible(obj.ra, obj.dec, lat, lon, date))
-      .map(obj => ({
-        name: obj.name,
-        type: obj.type,
-        magnitude: 0,
-        constellation: '',
-        ra: obj.ra.toString(),
-        dec: obj.dec.toString(),
-        season: '',
-        bestTime: '',
-        altitude: 0,
-        displayType: "Exoplanet",
-      }));
+  function getAllVisibleObjects(lat: number, lon: number, date: Date): VisibleObject[] {
     const observer = new Observer(lat, lon, 0);
+    const planets = getVisiblePlanets(lat, lon, date).map(o => ({ ...o, displayType: "Planet" }));
+    const stars = getVisibleBrightStars(lat, lon, date).map(o => ({ ...o, displayType: "Star" }));
+    const messier: VisibleObject[] = deepSkyObjects
+      .filter(o => isObjectVisible(o.ra, o.dec, lat, lon, date))
+      .map(o => ({ name: o.name, type: o.type, magnitude: 0, constellation: '', ra: o.ra.toFixed(2), dec: o.dec.toFixed(2), season: '', bestTime: '', altitude: 0, displayType: "Deep Sky" }));
+    const exos: VisibleObject[] = exoplanets
+      .filter(o => isObjectVisible(o.ra, o.dec, lat, lon, date))
+      .map(o => ({ name: o.name, type: o.type, magnitude: 0, constellation: '', ra: o.ra.toFixed(2), dec: o.dec.toFixed(2), season: '', bestTime: '', altitude: 0, displayType: "Exoplanet" }));
     const sunEq = Equator(Body.Sun, date, observer, true, true);
     const sunHor = Horizon(date, observer, sunEq.ra, sunEq.dec, "normal");
-    const sunVisible = sunHor.altitude > 0;
-    const sunObj = sunVisible
-      ? [{ name: "Sun", type: "sun", ra: sunEq.ra.toString(), dec: sunEq.dec.toString(), displayType: "Sun", magnitude: 0, constellation: '', season: '', bestTime: '', altitude: sunHor.altitude }]
-      : [];
+    const sunObj: VisibleObject[] = sunHor.altitude > 0 ? [{ name: "Sun", type: "sun", ra: sunEq.ra.toFixed(2), dec: sunEq.dec.toFixed(2), displayType: "Sun", magnitude: 0, constellation: '', season: '', bestTime: '', altitude: sunHor.altitude }] : [];
     const moonEq = Equator(Body.Moon, date, observer, true, true);
     const moonHor = Horizon(date, observer, moonEq.ra, moonEq.dec, "normal");
-    const moonVisible = moonHor.altitude > 0;
-    const moonObj = moonVisible
-      ? [{ name: "Moon", type: "moon", ra: moonEq.ra.toString(), dec: moonEq.dec.toString(), displayType: "Moon", magnitude: 0, constellation: '', season: '', bestTime: '', altitude: moonHor.altitude }]
-      : [];
+    const moonObj: VisibleObject[] = moonHor.altitude > 0 ? [{ name: "Moon", type: "moon", ra: moonEq.ra.toFixed(2), dec: moonEq.dec.toFixed(2), displayType: "Moon", magnitude: 0, constellation: '', season: '', bestTime: '', altitude: moonHor.altitude }] : [];
     return [...sunObj, ...moonObj, ...planets, ...stars, ...messier, ...exos];
   }
 
-  useEffect(() => {
-    const saved = localStorage.getItem("observations");
-    if (saved) setObservations(JSON.parse(saved));
-  }, []);
+  function getVisibleObjectsAtHour(lat: number, lon: number, baseDate: Date, hour: number) {
+    const date = new Date(baseDate);
+    date.setHours(hour, 0, 0, 0);
+    return getAllVisibleObjects(lat, lon, date).length;
+  }
 
-  useEffect(() => {
-    localStorage.setItem("observations", JSON.stringify(observations));
-  }, [observations]);
+  // ── Event parsing ─────────────────────────────────────────────────────────
 
   const parseEvents = useCallback(async (currentTime: Date) => {
     const [astroEventsText, eventsListText] = await Promise.all([
@@ -584,61 +472,36 @@ const AstroObservationApp = () => {
     for (const line of lines) {
       if (line.trim() === '') continue;
       if (/^[A-Za-z0-9\- ]+$/.test(line.trim())) {
-        if (currentTitle) {
-          eventDescMap[currentTitle.toLowerCase()] = currentDesc.join('\n').trim();
-        }
+        if (currentTitle) eventDescMap[currentTitle.toLowerCase()] = currentDesc.join('\n').trim();
         currentTitle = line.trim();
         currentDesc = [];
       } else {
         currentDesc.push(line);
       }
     }
-    if (currentTitle) {
-      eventDescMap[currentTitle.toLowerCase()] = currentDesc.join('\n').trim();
-    }
+    if (currentTitle) eventDescMap[currentTitle.toLowerCase()] = currentDesc.join('\n').trim();
     const eventList: EventType[] = [];
     let currentYear = '';
-    const monthMap: { [key: string]: string } = {
-      January: '01', February: '02', March: '03', April: '04', May: '05', June: '06',
-      July: '07', August: '08', September: '09', October: '10', November: '11', December: '12'
-    };
+    const monthMap: Record<string, string> = { January:'01', February:'02', March:'03', April:'04', May:'05', June:'06', July:'07', August:'08', September:'09', October:'10', November:'11', December:'12' };
     const astroLines = astroEventsText.split(/\r?\n/);
     for (let i = 0; i < astroLines.length; i++) {
       const line = astroLines[i].trim();
-      if (/^\d{4}/.test(line)) {
-        currentYear = line.match(/\d{4}/)?.[0] || '';
-        continue;
-      }
-      if (Object.keys(monthMap).includes(line)) {
-        continue;
-      }
+      if (/^\d{4}/.test(line)) { currentYear = line.match(/\d{4}/)?.[0] || ''; continue; }
+      if (Object.keys(monthMap).includes(line)) continue;
       if (/^(January|February|March|April|May|June|July|August|September|October|November|December)/.test(line)) {
         const match = line.match(/^(\w+)\s+(\d{1,2}(?:–\d{1,2})?)(?:,?\s*([\d: UTC-]+))?\s*[–-]\s*(.+)$/);
         if (match) {
           const [, month, day, , nameRaw] = match;
-          let name = nameRaw.split(':')[0].trim();
-          let eventId = `${currentYear}-${monthMap[month]}-${day.split('–')[0].padStart(2, '0')}-${name}`.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+          const name = nameRaw.split(':')[0].trim();
           const dateStr = `${currentYear}-${monthMap[month]}-${day.split('–')[0].padStart(2, '0')}`;
           let imageName = '';
           const moonMatch = name.match(/Full Moon \(([^)]+)\)/i);
-          if (moonMatch) {
-            imageName = `${moonMatch[1].toLowerCase().replace(/ /g, '-')}.jpg`;
-          } else if (/Full Moon/i.test(name)) {
-            imageName = 'full-moon.jpg';
-          } else {
-            imageName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') + '.jpg';
-          }
-          let descKey = name.toLowerCase().replace(/\(.+\)/, '').trim();
-          let description = eventDescMap[descKey] || 'No data available.';
-          let fullDescription = eventDescMap[descKey] ? eventDescMap[descKey] : 'No data available.';
-          eventList.push({
-            id: eventId,
-            name,
-            date: dateStr,
-            description: description.split('\n')[0],
-            imageName,
-            fullDescription
-          });
+          if (moonMatch) imageName = `${moonMatch[1].toLowerCase().replace(/ /g, '-')}.jpg`;
+          else if (/Full Moon/i.test(name)) imageName = 'full-moon.jpg';
+          else imageName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') + '.jpg';
+          const descKey = name.toLowerCase().replace(/\(.+\)/, '').trim();
+          const description = eventDescMap[descKey] || 'No data available.';
+          eventList.push({ id: `${currentYear}-${monthMap[month]}-${day.split('–')[0].padStart(2,'0')}-${name}`.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase(), name, date: dateStr, description: description.split('\n')[0], imageName, fullDescription: description });
         }
       }
     }
@@ -652,92 +515,211 @@ const AstroObservationApp = () => {
       const now = currentTime;
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
-      let filtered: EventType[] = [];
-      if (month === 12) {
-        filtered = allEvents.filter(ev => {
-          const evYear = parseInt(ev.date.split('-')[0]);
-          return evYear === year || evYear === year + 1;
-        });
-      } else {
-        filtered = allEvents.filter(ev => parseInt(ev.date.split('-')[0]) === year);
-      }
+      let filtered = month === 12
+        ? allEvents.filter(ev => { const y = parseInt(ev.date.split('-')[0]); return y === year || y === year + 1; })
+        : allEvents.filter(ev => parseInt(ev.date.split('-')[0]) === year);
       filtered = filtered.filter(ev => new Date(ev.date) >= now);
       setEvents(filtered);
       setEventsLoading(false);
     });
   }, [currentTime, parseEvents]);
 
-  useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    if (isIOS) {
-      document.body.classList.add('ios-device');
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const getLocationData = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => console.log('Location access denied')
+      );
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const widget = document.querySelector('.elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129');
-      if (widget) {
-        const spans = widget.querySelectorAll('span, div');
-        spans.forEach(el => {
-          if (el.textContent && el.textContent.includes('Free Website Translator Widget')) {
-            (el as HTMLElement).style.display = 'none';
-          }
-        });
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const handlePlaceInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPlaceInput(e.target.value);
+    if (e.target.value.length > 2) {
+      fetch(`${nominatimBase}/search?q=${encodeURIComponent(e.target.value)}&format=json&limit=5`)
+        .then(res => res.json())
+        .then(data => setLocationSuggestions(data));
+    } else {
+      setLocationSuggestions([]);
+    }
+  };
 
-  useEffect(() => {
-    setIsIphone(/iPhone/.test(navigator.userAgent));
-  }, []);
+  const handleAddObservation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) { showNotification('Please enter an object name'); return; }
+    if (editObservationId !== null) {
+      setObservations(obs => obs.map(o => o.id === editObservationId ? { ...o, ...formData } : o));
+      setEditObservationId(null);
+    } else {
+      setObservations([...observations, { id: Date.now(), ...formData, dateAdded: new Date().toISOString() }]);
+    }
+    setFormData(emptyForm);
+    setShowAddForm(false);
+    setShowSuccess(true);
+    setActiveTab('objects');
+    setTimeout(() => setShowSuccess(false), 3000);
+  };
 
-  useEffect(() => {
-    const fixWidget = () => {
-      const el = document.querySelector('.fixed-translate-widget');
-      if (el) {
-        el.setAttribute('style', 'position:fixed !important; top:16px !important; right:24px !important; left:auto !important; z-index:10010 !important; background:transparent !important; margin:0 !important; width:auto !important; min-width:0 !important; max-width:none !important;');
-      }
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { showNotification('Image too large. Please use an image under 8MB.'); return; }
+    try {
+      const compressed = await compressImage(file);
+      setFormData(prev => ({ ...prev, image: compressed }));
+    } catch {
+      showNotification('Error processing image. Please try another file.');
+    }
+  };
+
+  const handleImageClick = (img: string) => {
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(`<html><head><title>Observation Image</title><style>body{background:#000;margin:0;display:flex;flex-direction:column;align-items:center}.close-btn{position:fixed;top:20px;right:20px;background:#222;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:18px;cursor:pointer;z-index:1000}img{max-width:100vw;max-height:100vh;display:block;margin:auto}</style></head><body><button class="close-btn" onclick="window.close()">Close ✕</button><img src="${img}" alt="Observation"/></body></html>`);
+    }
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        if (Array.isArray(imported)) setObservations(imported);
+        else showNotification('Invalid file format.');
+      } catch { showNotification('Could not import file.'); }
     };
-    fixWidget();
-    window.addEventListener('resize', fixWidget);
-    return () => window.removeEventListener('resize', fixWidget);
-  }, []);
+    reader.readAsText(file);
+  };
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const el = document.querySelector('.fixed-translate-widget');
-      if (el) {
-        el.setAttribute(
-          'style',
-          'position:fixed !important; top:16px !important; right:24px !important; left:auto !important; z-index:10010 !important; background:transparent !important; margin:0 !important; width:auto !important; min-width:0 !important; max-width:none !important; pointer-events:auto !important;'
-        );
-      }
-      const inner = document.querySelector('.fixed-translate-widget > .elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129');
-      if (inner) {
-        (inner as HTMLElement).style.position = 'static';
-        (inner as HTMLElement).style.margin = '0';
-        (inner as HTMLElement).style.background = 'transparent';
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const exportObservations = () => {
+    const dataStr = JSON.stringify(observations, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    const a = document.createElement('a');
+    a.setAttribute('href', dataUri);
+    a.setAttribute('download', `astro-observations-${new Date().toISOString().split('T')[0]}.json`);
+    a.click();
+  };
+
+  const navigateCalendar = (direction: string) => {
+    const newDate = new Date(calendarDate);
+    newDate.setMonth(newDate.getMonth() + (direction === 'prev' ? -1 : 1));
+    setCalendarDate(newDate);
+    setCalendarSelectedDay(null);
+  };
+
+  const getDaysInMonth = (date: Date): (number | null)[] => {
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const days: (number | null)[] = Array(firstDay).fill(null);
+    for (let d = 1; d <= lastDay; d++) days.push(d);
+    return days;
+  };
+
+  const getObservationsForDay = (date: Date, day: number) => {
+    const dateStr = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
+    return observations.filter(obs => obs.date === dateStr);
+  };
+
+  const getEventsForDay = (date: Date, day: number) => {
+    const dateStr = `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
+    return events.filter(ev => ev.date === dateStr);
+  };
+
+  // URL helpers
+  const simbadUrl = (name: string) => `http://simbad.u-strasbg.fr/simbad/sim-basic?Ident=${encodeURIComponent(name)}`;
+  const wikipediaUrl = (name: string) => `https://en.wikipedia.org/wiki/${encodeURIComponent(name.replace(/ /g, "_"))}`;
+  const nasaExoplanetUrl = (name: string) => `https://exoplanetarchive.ipac.caltech.edu/cgi-bin/DisplayOverview/nph-DisplayOverview?objname=${encodeURIComponent(name)}`;
+  const jplSsdUrl = (name: string) => `https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html#/?sstr=${encodeURIComponent(name)}`;
+
+  // Derived
+  const allObjects: CelestialObject[] = [...visiblePlanets, ...visibleStars];
+
+  const filteredObservations = observations.filter(obs => {
+    const typeMatch = filterType === 'all' || obs.type === filterType;
+    const favoriteMatch = !showFavorites || obs.favorite;
+    const searchMatch = !searchQuery || obs.name.toLowerCase().includes(searchQuery.toLowerCase()) || obs.location.toLowerCase().includes(searchQuery.toLowerCase()) || obs.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return typeMatch && favoriteMatch && searchMatch;
+  });
+
+  // ── Statistics ────────────────────────────────────────────────────────────
+
+  const typeStats = ['star','galaxy','nebula','cluster','planet','other'].map(type => ({
+    type, count: observations.filter(o => o.type === type).length
+  })).filter(s => s.count > 0).sort((a,b) => b.count - a.count);
+
+  const monthStats = (() => {
+    const now = new Date();
+    return Array.from({ length: 12 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+      const label = d.toLocaleString('en-US', { month: 'short', year: '2-digit' });
+      const count = observations.filter(o => {
+        const od = new Date(o.date);
+        return od.getMonth() === d.getMonth() && od.getFullYear() === d.getFullYear();
+      }).length;
+      return { label, count };
+    });
+  })();
+
+  const maxTypeCount = Math.max(...typeStats.map(s => s.count), 1);
+  const maxMonthCount = Math.max(...monthStats.map(s => s.count), 1);
+
+  // ── Wishlist helpers ──────────────────────────────────────────────────────
+
+  const handleAddWishlist = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wishlistForm.name.trim()) { showNotification('Please enter an object name'); return; }
+    setWishlist([...wishlist, { id: Date.now(), ...wishlistForm, dateAdded: new Date().toISOString() }]);
+    setWishlistForm({ name: '', type: 'star', priority: 'medium', notes: '' });
+    setShowWishlistForm(false);
+  };
+
+  const moveWishlistToObservation = (item: WishlistItem) => {
+    setFormData({ ...emptyForm, name: item.name, type: item.type, description: item.notes });
+    setWishlist(wl => wl.filter(w => w.id !== item.id));
+    setEditObservationId(null);
+    setShowAddForm(true);
+    setActiveTab('home');
+  };
+
+  const priorityColor = (p: 'high' | 'medium' | 'low') =>
+    p === 'high' ? 'bg-red-600' : p === 'medium' ? 'bg-yellow-600' : 'bg-green-700';
+
+  const filteredWishlist = wishlistFilter === 'all' ? wishlist : wishlist.filter(w => w.priority === wishlistFilter);
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  const tabs = [
+    { id: 'home',     label: 'Home',        icon: '🏠' },
+    { id: 'objects',  label: 'Objects',     icon: '🌟' },
+    { id: 'stats',    label: 'Stats',       icon: '📊' },
+    { id: 'wishlist', label: 'Wishlist',    icon: '📋' },
+    { id: 'iss',      label: 'ISS',         icon: '🛸' },
+    { id: 'resources',label: 'Resources',   icon: '📚' },
+    { id: 'links',    label: 'Links',       icon: '🔗' },
+    { id: 'calendar', label: 'Calendar',    icon: '📅' },
+    { id: 'solar',    label: 'Solar',       icon: '🪐' },
+    { id: 'settings', label: 'Settings',    icon: '⚙️' },
+  ];
 
   return (
     <div style={{ position: 'relative' }}>
       <div className="fixed-translate-widget" style={{ position: 'fixed', top: 16, right: 24, zIndex: 10010, background: 'transparent' }}>
         <div className="elfsight-app-eb167c9f-6a9a-40e5-b4dc-45e2558d4129" data-elfsight-app-lazy></div>
       </div>
-      {redFilter && (
-        <div className="red-filter-overlay" />
-      )}
-      <div className={`min-h-screen${redFilter ? ' red-filter-text bg-[#1a0000]' : ' text-white bg-gray-900'}`}>
+      {redFilter && <div className="red-filter-overlay" />}
+
+      <div className={`min-h-screen ${redFilter ? 'red-filter-text bg-[#1a0000]' : 'text-white bg-gray-900'}`}>
         <div className={`w-full mx-auto rounded-b-2xl shadow-lg ${redFilter ? 'red-filter-header' : 'bg-gray-800'}`} style={{ maxWidth: 1600 }}>
-          <header className={`p-4 shadow-none`} style={{ paddingLeft: '10px', paddingRight: '10px', borderBottom: 'none' }}>
+
+          {/* Header */}
+          <header className="p-4" style={{ paddingLeft: 10, paddingRight: 10, borderBottom: 'none' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="text-2xl">🔭</div>
+                <span className="text-2xl">🔭</span>
                 <h1 className="text-2xl font-bold">AstroLog</h1>
               </div>
               <div className="flex-1 flex justify-center">
@@ -746,15 +728,13 @@ const AstroObservationApp = () => {
                     onClick={() => setRedFilter(r => !r)}
                     className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'red-filter-btn' : 'bg-blue-600 hover:bg-blue-700'}`}
                     title="Toggle red filter for night vision"
-                    style={{ minWidth: 40, minHeight: 40 }}
                   >
                     <span style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', background: 'red', border: '2px solid #fff' }}></span>
                   </button>
                   <button
-                    onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
+                    onClick={() => { setShowAddForm(true); setEditObservationId(null); setFormData(emptyForm); }}
                     className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors duration-200 ${redFilter ? 'red-filter-btn' : 'bg-blue-600 hover:bg-blue-700'}`}
                     title="Add Observation"
-                    style={{ minWidth: 40, minHeight: 40 }}
                   >
                     <Plus size={22} />
                   </button>
@@ -762,315 +742,184 @@ const AstroObservationApp = () => {
               </div>
             </div>
           </header>
-          <nav style={{ paddingLeft: '10px', paddingRight: '10px' }} className="border-t border-gray-700">
-            <div className="flex space-x-8">
-              {[
-                { id: 'home', label: 'Home', icon: '🏠' },
-                { id: 'objects', label: 'Objects', icon: '🌟' },
-                { id: 'resources', label: 'Resources', icon: '📚' },
-                { id: 'links', label: 'Useful Links', icon: '🔗' },
-                { id: 'calendar', label: 'Calendar', icon: '📅' },
-                { id: 'solar', label: 'Solar System', icon: '🪐' },
-                { id: 'settings', label: 'Settings', icon: '⚙️' }
-              ].map(tab => (
+
+          {/* Nav — scrollable on mobile */}
+          <nav style={{ paddingLeft: 10, paddingRight: 10, overflowX: 'auto' }} className="border-t border-gray-700">
+            <div className="flex" style={{ minWidth: 'max-content' }}>
+              {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-400'
-                      : 'border-transparent text-gray-300 hover:text-gray-200'
-                  }`}
+                  className={`py-4 px-3 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab.id ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-300 hover:text-gray-200'}`}
                 >
-                  <span className="mr-2">{tab.icon}</span>
+                  <span className="mr-1">{tab.icon}</span>
                   {!isIphone && tab.label}
                 </button>
               ))}
             </div>
           </nav>
+
+          {/* Main content */}
           <main className="w-full px-4 py-6" style={{ maxWidth: 1600, margin: '0 auto' }}>
+
+            {/* ── HOME ────────────────────────────────────────────────── */}
             {activeTab === 'home' && (
               <div className="space-y-6">
+                {/* Location / time / object selector */}
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h2 className="text-xl font-bold mb-4 flex items-center">
                     <Eye className="mr-2" size={24} />
                     What can I observe now?
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {/* Object picker */}
                     <div>
                       <label className="block text-sm font-medium mb-2">Celestial Object:</label>
                       <select
                         value={selectedObject ? selectedObject.name : ""}
-                        onChange={e => {
-                          const name = e.target.value;
-                          const found = allObjects.find(obj => obj.name === name) || null;
-                          setSelectedObject(found);
-                        }}
-                        className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
+                        onChange={e => setSelectedObject(allObjects.find(o => o.name === e.target.value) || null)}
+                        className="w-full p-2 bg-gray-700 rounded border border-gray-600"
                       >
                         <option value="">Select object...</option>
-                        {allObjects.map((obj: CelestialObject) => (
-                          <option key={obj.name} value={obj.name}>{obj.name}</option>
-                        ))}
+                        {allObjects.map(obj => <option key={obj.name} value={obj.name}>{obj.name} ({(obj as VisibleObject).displayType || obj.type})</option>)}
                       </select>
                       {selectedObject && (
-                        <div className="space-x-2 mt-2">
-                          {selectedObject.type === "planet" && (
-                            <>
-                              <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                              <a href={jplSsdUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a>
-                              <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                            </>
-                          )}
-                          {(selectedObject.type === "galaxy" || selectedObject.type === "nebula" || selectedObject.type === "cluster" || selectedObject.type === "deep_sky") && (
-                            <>
-                              <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                              <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                            </>
-                          )}
-                          {selectedObject.type === "exoplanet" && (
-                            <>
-                              <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                              <a href={nasaExoplanetUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a>
-                              <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                            </>
-                          )}
-                          {selectedObject.type === "star" && (
-                            <>
-                              <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                              <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                            </>
-                          )}
+                        <div className="flex flex-wrap gap-2 mt-2 text-sm">
+                          <a href={wikipediaUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Wikipedia</a>
+                          <a href={simbadUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">SIMBAD</a>
+                          {selectedObject.type === "planet" && <a href={jplSsdUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">JPL</a>}
+                          {selectedObject.type === "exoplanet" && <a href={nasaExoplanetUrl(selectedObject.name)} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">NASA</a>}
                         </div>
                       )}
                     </div>
+                    {/* Date/time */}
                     <div>
                       <label className="block text-sm font-medium mb-2">Date & Time:</label>
-                      <DatePicker
-                        selected={currentTime}
-                        onChange={(date: Date | null) => date && setCurrentTime(date)}
-                        showTimeSelect
-                        dateFormat="Pp"
-                        className="w-44 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                      />
+                      <DatePicker selected={currentTime} onChange={(d: Date | null) => d && setCurrentTime(d)} showTimeSelect dateFormat="Pp" className="w-44 p-2 bg-gray-700 rounded border border-gray-600" />
                     </div>
+                    {/* Location */}
                     <div>
                       <label className="block text-sm font-medium mb-2">Location:</label>
                       <div className="flex space-x-2">
                         <div className="relative flex-1">
-                          <input
-                            type="text"
-                            value={placeInput}
-                            onChange={handlePlaceInput}
-                            placeholder="Enter location"
-                            className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input"
-                          />
+                          <input type="text" value={placeInput} onChange={handlePlaceInput} placeholder="Enter location" className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
                           {locationSuggestions.length > 0 && (
-                            <ul className="absolute left-0 right-0 bg-white text-black z-10">
-                              {locationSuggestions.map(suggestion => (
-                                <li
-                                  key={suggestion.place_id}
-                                  onClick={() => {
-                                    setUserLocation({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon) });
-                                    setPlaceInput(suggestion.display_name);
-                                    setLocationSuggestions([]);
-                                  }}
-                                  className="cursor-pointer hover:bg-gray-200 px-2 py-1"
-                                >
-                                  {suggestion.display_name}
-                                </li>
+                            <ul className="absolute left-0 right-0 bg-white text-black z-10 rounded shadow">
+                              {locationSuggestions.map(s => (
+                                <li key={s.place_id} onClick={() => { setUserLocation({ lat: parseFloat(s.lat), lng: parseFloat(s.lon) }); setPlaceInput(s.display_name); setLocationSuggestions([]); }} className="cursor-pointer hover:bg-gray-200 px-2 py-1 text-sm">{s.display_name}</li>
                               ))}
                             </ul>
                           )}
                         </div>
-                        <button
-                          onClick={getLocationData}
-                          className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded"
-                          title="Get current location"
-                          type="button"
-                        >
-                          <MapPin size={16} />
-                        </button>
+                        <button onClick={getLocationData} className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded" title="Get current location"><MapPin size={16} /></button>
                       </div>
                       <div className="text-xs text-gray-400 mt-1">{placeName}</div>
                     </div>
+                    {/* Coordinates */}
                     <div>
                       <label className="block text-sm font-medium mb-2">Coordinates:</label>
                       <div className="flex space-x-2">
-                        <input
-                          type="number"
-                          value={userLocation.lat.toFixed(2)}
-                          onChange={(e) => setUserLocation({ ...userLocation, lat: parseFloat(e.target.value) })}
-                          className="w-24 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                          step="0.01"
-                        />
-                        <input
-                          type="number"
-                          value={userLocation.lng.toFixed(2)}
-                          onChange={(e) => setUserLocation({ ...userLocation, lng: parseFloat(e.target.value) })}
-                          className="w-24 p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500"
-                          step="0.01"
-                        />
+                        <input type="number" value={userLocation.lat.toFixed(2)} onChange={e => setUserLocation({ ...userLocation, lat: parseFloat(e.target.value) })} className="w-24 p-2 bg-gray-700 rounded border border-gray-600" step="0.01" />
+                        <input type="number" value={userLocation.lng.toFixed(2)} onChange={e => setUserLocation({ ...userLocation, lng: parseFloat(e.target.value) })} className="w-24 p-2 bg-gray-700 rounded border border-gray-600" step="0.01" />
                       </div>
                     </div>
                   </div>
-                  <div className="mt-4">
-                    <div className="mb-2">
+
+                  {/* Bortle + sky chart link */}
+                  <div className="mt-4 space-y-1">
+                    <div>
                       <span className="font-bold text-gray-300">Light pollution: </span>
                       <span className="text-yellow-300">{bortleClass}</span>
                       {' · '}
-                      <a
-                        href={`https://lightpollutionmap.app/?lat=${userLocation.lat.toFixed(5)}&lng=${userLocation.lng.toFixed(5)}&zoom=6`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 underline"
-                      >
-                        View map
-                      </a>
+                      <a href={`https://lightpollutionmap.app/?lat=${userLocation.lat.toFixed(5)}&lng=${userLocation.lng.toFixed(5)}&zoom=6`} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">View map</a>
                     </div>
-                    <div className="mb-2">
-                      <span className="font-bold">Sky Chart:</span>{' '}
-                      <a
-                        href={`https://stellarium-web.org/?lat=${userLocation.lat}&lon=${userLocation.lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 underline"
-                      >
-                        View in Stellarium Web
-                      </a>
+                    <div>
+                      <span className="font-bold">Sky Chart: </span>
+                      <a href={`https://stellarium-web.org/?lat=${userLocation.lat}&lon=${userLocation.lng}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">View in Stellarium Web</a>
                     </div>
                   </div>
-                  <button
-                    className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2 mt-4"
-                    onClick={() => setShowSkyChart(!showSkyChart)}
-                    type="button"
-                  >
-                    <Sun size={16} />
-                    <span>{showSkyChart ? 'Hide' : 'Show'} Simple Visibility Chart</span>
+
+                  <button className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2 mt-4" onClick={() => setShowSkyChart(!showSkyChart)}>
+                    <Sun size={16} /><span>{showSkyChart ? 'Hide' : 'Show'} Visibility by Hour</span>
                   </button>
                   {showSkyChart && (
                     <div className="mt-4">
-                      <div className="font-bold mb-2">Visibilidade (próximas 6 horas):</div>
-                      <div className="flex space-x-2">
-                        {Array.from({ length: 6 }).map((_, i) => {
+                      <div className="font-bold mb-2">Objects visible — next 12 hours:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {Array.from({ length: 12 }).map((_, i) => {
                           const hour = (currentTime.getHours() + i) % 24;
                           const count = getVisibleObjectsAtHour(userLocation.lat, userLocation.lng, currentTime, hour);
                           return (
                             <div key={i} className="flex flex-col items-center">
                               <div className="text-xs text-gray-400">{hour}:00</div>
                               <button
-                                className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-700 mt-1 hover:bg-green-600"
-                                onClick={() => {
-                                  const newTime = new Date(currentTime);
-                                  newTime.setHours(hour, 0, 0, 0);
-                                  setCurrentTime(newTime);
-                                }}
-                              >
-                                {count}
-                              </button>
+                                className={`w-10 h-10 rounded-full flex items-center justify-center mt-1 font-bold text-sm ${count > 20 ? 'bg-green-600' : count > 10 ? 'bg-blue-600' : 'bg-gray-700'}`}
+                                onClick={() => { const t = new Date(currentTime); t.setHours(hour,0,0,0); setCurrentTime(t); }}
+                              >{count}</button>
                             </div>
                           );
                         })}
                       </div>
-                      <div className="text-xs text-gray-400 mt-1">Número de objetos visíveis por hora (planetas, estrelas, deep sky, exoplanetas)</div>
+                      <div className="text-xs text-gray-400 mt-1">Number of objects visible per hour (click to set time)</div>
                     </div>
                   )}
                 </div>
 
+                {/* Visible objects grid */}
                 <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">🌠 Objects</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {visibleObjectsNow.length === 0 && (
-                      <div className="text-gray-400">No objects are currently visible.</div>
-                    )}
+                  <h3 className="text-lg font-bold mb-4">🌠 Currently Visible ({visibleObjectsNow.length} objects)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {visibleObjectsNow.length === 0 && <div className="text-gray-400">No objects currently visible.</div>}
                     {visibleObjectsNow.map(obj => (
-                      <div key={obj.name} className="bg-gray-700 p-4 rounded-lg">
-                        <h4 className="font-bold text-blue-400">{obj.name}</h4>
-                        <p className="text-sm text-gray-300">Type: {obj.displayType}</p>
-                        {obj.ra && obj.dec && (
-                          <p className="text-sm text-gray-300">RA: {obj.ra} | Dec: {obj.dec}</p>
-                        )}
-                        <div className="space-x-2 mt-2">
-                          <a href={wikipediaUrl(obj.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                          <a href={simbadUrl(obj.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a>
-                          {obj.type === "planet" && (
-                            <a href={jplSsdUrl(obj.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a>
-                          )}
-                          {obj.type === "exoplanet" && (
-                            <a href={nasaExoplanetUrl(obj.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a>
-                          )}
+                      <div key={obj.name} className="bg-gray-700 p-3 rounded-lg">
+                        <h4 className="font-bold text-blue-400 text-sm">{obj.name}</h4>
+                        <p className="text-xs text-gray-400">{obj.displayType}</p>
+                        {obj.altitude > 0 && <p className="text-xs text-gray-400">Alt: {obj.altitude.toFixed(1)}°</p>}
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <a href={wikipediaUrl(obj.name)} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">Wiki</a>
+                          <span className="text-gray-600">·</span>
+                          <a href={simbadUrl(obj.name)} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">SIMBAD</a>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="bg-gray-800 rounded-lg p-6" style={{ minHeight: '340px', overflow: 'visible' }}>
-                  <h3 className="text-lg font-bold mb-4 flex items-center">
-                    <span className="mr-2">🌙</span>
-                    Moon Today
-                  </h3>
+                {/* Moon */}
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <h3 className="text-lg font-bold mb-4">🌙 Moon Today</h3>
                   <div className="mb-4 flex items-center space-x-4">
                     <span className="text-lg font-semibold text-blue-300">{moonPhase.phase}</span>
                     <span className="text-gray-400">·</span>
                     <span className="text-gray-300">{moonPhase.illumination}% illuminated</span>
                   </div>
-                  <iframe
-                    title="Moon Giant Phase"
-                    src="https://www.moongiant.com/phase/today/"
-                    width="300"
-                    height="450"
-                    frameBorder="0"
-                    scrolling="no"
-                    style={{ background: "transparent" }}
-                  ></iframe>
-                  <div className="text-xs text-gray-400 mt-2">
-                    Fonte: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener noreferrer">MoonGiant.com</a>
-                  </div>
+                  <iframe title="Moon Giant Phase" src="https://www.moongiant.com/phase/today/" width="300" height="450" frameBorder="0" scrolling="no" style={{ background: "transparent" }}></iframe>
+                  <div className="text-xs text-gray-400 mt-2">Source: <a href="https://www.moongiant.com/phase/today/" target="_blank" rel="noopener noreferrer" className="text-blue-400">MoonGiant.com</a></div>
                 </div>
               </div>
             )}
 
-            {activeTab === 'solar' && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold mb-4 flex items-center">
-                  <span className="mr-2">🪐</span>
-                  Solar System
-                </h2>
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <iframe
-                    src="https://www.solarsystemscope.com/iframe"
-                    width="100%"
-                    height="600"
-                    style={{ minWidth: "500px", minHeight: "400px", border: "2px solid #0f5c6e", borderRadius: "8px", backgroundColor: "transparent" }}
-                    title="Solar System Scope"
-                    frameBorder="0"
-                    allowFullScreen
-                  />
-                  <div className="text-xs text-gray-400 mt-2">
-                    Fonte: <a href="https://www.solarsystemscope.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Solar System Scope</a>
-                  </div>
-                </div>
-              </div>
-            )}
-
+            {/* ── OBJECTS ─────────────────────────────────────────────── */}
             {activeTab === 'objects' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">My Observations</h2>
-                  <div className="flex items-center space-x-4">
-                    <button
-                      onClick={() => setShowFavorites(!showFavorites)}
-                      className={`px-4 py-2 rounded ${showFavorites ? 'bg-yellow-600' : 'bg-gray-600'}`}
-                    >
-                      <Star size={16} className="inline mr-2" />
-                      Favorites
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-2xl font-bold">My Observations ({observations.length})</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Search */}
+                    <div className="relative">
+                      <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="pl-7 pr-3 py-2 bg-gray-700 rounded border border-gray-600 text-sm ios-input"
+                      />
+                    </div>
+                    <button onClick={() => setShowFavorites(!showFavorites)} className={`px-3 py-2 rounded text-sm ${showFavorites ? 'bg-yellow-600' : 'bg-gray-600'}`}>
+                      <Star size={14} className="inline mr-1" />Favorites
                     </button>
-                    <select
-                      value={filterType}
-                      onChange={(e) => setFilterType(e.target.value)}
-                      className="p-2 bg-gray-700 rounded border border-gray-600"
-                    >
+                    <select value={filterType} onChange={e => setFilterType(e.target.value)} className="p-2 bg-gray-700 rounded border border-gray-600 text-sm">
                       <option value="all">All Types</option>
                       <option value="star">Stars</option>
                       <option value="galaxy">Galaxies</option>
@@ -1081,64 +930,297 @@ const AstroObservationApp = () => {
                     </select>
                   </div>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredObservations.map(obs => (
-                    <div
-                      key={obs.id}
-                      className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:ring-2 hover:ring-blue-400 border border-gray-700"
-                      onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}
-                    >
+                    <div key={obs.id} className="bg-gray-800 rounded-lg p-4 cursor-pointer hover:ring-2 hover:ring-blue-400 border border-gray-700" onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}>
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-bold text-lg text-blue-400">{obs.name}</h3>
-                        {obs.favorite && <Star className="text-yellow-400 fill-current" size={20} />}
+                        {obs.favorite && <Star className="text-yellow-400 fill-current flex-shrink-0" size={18} />}
                       </div>
                       {obs.image && (
                         <div className="mb-3">
-                          <img
-                            src={obs.image}
-                            alt={obs.name}
-                            className="w-full h-32 object-cover rounded-lg hover:opacity-80 cursor-pointer"
-                            onClick={() => handleImageClick(obs.image)}
-                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                          />
+                          <img src={obs.image} alt={obs.name} className="w-full h-32 object-cover rounded-lg hover:opacity-80" onClick={e => { e.stopPropagation(); handleImageClick(obs.image); }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                         </div>
                       )}
-                      <p className="text-sm text-gray-300 mb-1">Type: {obs.type}</p>
-                      <p className="text-sm text-gray-300 mb-1">Date: {obs.date}</p>
-                      <p className="text-sm text-gray-300 mb-1">Location: {obs.location}</p>
-                      {obs.magnitude && <p className="text-sm text-gray-300 mb-1">Magnitude: {obs.magnitude}</p>}
-                      {obs.ra && <p className="text-sm text-gray-300 mb-1">RA: {obs.ra} | Dec: {obs.dec}</p>}
-                      {obs.distance && <p className="text-sm text-gray-300 mb-1">Distance: {obs.distance} {obs.distanceUnit}</p>}
-                      {obs.description && <p className="text-sm text-gray-400 mt-2">{obs.description}</p>}
-                      <div>
-                        <a href={simbadUrl(obs.name)} target="_blank" rel="noopener noreferrer">SIMBAD</a> |{" "}
-                        <a href={wikipediaUrl(obs.name)} target="_blank" rel="noopener noreferrer">Wikipedia</a>
-                        {obs.type === "exoplanet" && (
-                          <> | <a href={nasaExoplanetUrl(obs.name)} target="_blank" rel="noopener noreferrer">NASA Exoplanet Archive</a></>
-                        )}
-                        {obs.type === "planet" && (
-                          <> | <a href={jplSsdUrl(obs.name)} target="_blank" rel="noopener noreferrer">JPL SSD</a></>
-                        )}
-                      </div>
+                      <p className="text-sm text-gray-300">Type: <span className="capitalize">{obs.type}</span></p>
+                      <p className="text-sm text-gray-300">Date: {obs.date}</p>
+                      {obs.location && <p className="text-sm text-gray-300 truncate">📍 {obs.location}</p>}
+                      {obs.equipment && <p className="text-sm text-gray-400 truncate">🔭 {obs.equipment}</p>}
+                      {obs.seeing && <p className="text-sm text-yellow-400">Seeing: {starsDisplay(obs.seeing)}</p>}
+                      {obs.magnitude && <p className="text-sm text-gray-300">Mag: {obs.magnitude}</p>}
+                      {obs.description && <p className="text-sm text-gray-400 mt-1 line-clamp-2">{obs.description}</p>}
                     </div>
                   ))}
                 </div>
+
                 {filteredObservations.length === 0 && (
                   <div className="text-center py-12">
                     <div className="text-6xl mb-4">🔭</div>
-                    <h3 className="text-xl font-bold mb-2">No observations yet</h3>
-                    <p className="text-gray-400 mb-4">Start logging your astronomical observations!</p>
-                    <button
-                      onClick={() => { setShowAddForm(true); setEditObservationId(null); }}
-                      className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg"
-                    >
-                      Add First Observation
-                    </button>
+                    <h3 className="text-xl font-bold mb-2">{searchQuery ? 'No results found' : 'No observations yet'}</h3>
+                    <p className="text-gray-400 mb-4">{searchQuery ? 'Try a different search term.' : 'Start logging your astronomical observations!'}</p>
+                    {!searchQuery && <button onClick={() => { setShowAddForm(true); setEditObservationId(null); setFormData(emptyForm); }} className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg">Add First Observation</button>}
                   </div>
                 )}
               </div>
             )}
 
+            {/* ── STATS ───────────────────────────────────────────────── */}
+            {activeTab === 'stats' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold flex items-center gap-2"><BarChart2 size={24} /> Statistics</h2>
+
+                {/* Summary cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Observations', value: observations.length, icon: '🔭' },
+                    { label: 'Favorites', value: observations.filter(o => o.favorite).length, icon: '⭐' },
+                    { label: 'Types Observed', value: new Set(observations.map(o => o.type)).size, icon: '🌠' },
+                    { label: 'Wishlist Items', value: wishlist.length, icon: '📋' },
+                  ].map(card => (
+                    <div key={card.label} className="bg-gray-800 rounded-lg p-4 text-center">
+                      <div className="text-3xl mb-1">{card.icon}</div>
+                      <div className="text-3xl font-bold text-blue-400">{card.value}</div>
+                      <div className="text-sm text-gray-400 mt-1">{card.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {observations.length === 0 ? (
+                  <div className="bg-gray-800 rounded-lg p-8 text-center text-gray-400">Add observations to see statistics here.</div>
+                ) : (
+                  <>
+                    {/* By type */}
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-lg font-bold mb-4">By Object Type</h3>
+                      <div className="space-y-2">
+                        {typeStats.map(({ type, count }) => (
+                          <div key={type} className="flex items-center gap-3">
+                            <div className="w-20 text-sm text-gray-300 capitalize">{type}</div>
+                            <div className="flex-1 bg-gray-700 rounded h-5 overflow-hidden">
+                              <div className="bg-blue-500 h-5 rounded transition-all" style={{ width: `${(count / maxTypeCount) * 100}%` }} />
+                            </div>
+                            <div className="text-sm text-white w-6 text-right">{count}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* By month */}
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-lg font-bold mb-4">Observations — Last 12 Months</h3>
+                      <div className="flex items-end gap-1" style={{ height: 120 }}>
+                        {monthStats.map(({ label, count }) => (
+                          <div key={label} className="flex flex-col items-center flex-1">
+                            <div className="w-full bg-blue-500 rounded-t transition-all" style={{ height: `${maxMonthCount > 0 ? (count / maxMonthCount) * 90 : 0}px`, minHeight: count > 0 ? 4 : 0 }} title={`${count} observations`} />
+                            <div className="text-xs text-gray-500 mt-1 rotate-45 origin-top-left translate-y-2" style={{ fontSize: 9, whiteSpace: 'nowrap' }}>{label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Most used equipment */}
+                    {observations.some(o => o.equipment) && (
+                      <div className="bg-gray-800 rounded-lg p-6">
+                        <h3 className="text-lg font-bold mb-4">🔭 Equipment Used</h3>
+                        <div className="space-y-1">
+                          {Array.from(new Set(observations.filter(o => o.equipment).map(o => o.equipment))).map(eq => (
+                            <div key={eq} className="flex justify-between text-sm">
+                              <span className="text-gray-300">{eq}</span>
+                              <span className="text-blue-400 font-bold">{observations.filter(o => o.equipment === eq).length}×</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Top locations */}
+                    {observations.some(o => o.location) && (
+                      <div className="bg-gray-800 rounded-lg p-6">
+                        <h3 className="text-lg font-bold mb-4">📍 Top Locations</h3>
+                        <div className="space-y-1">
+                          {Array.from(new Set(observations.filter(o => o.location).map(o => o.location))).slice(0, 8).map(loc => (
+                            <div key={loc} className="flex justify-between text-sm">
+                              <span className="text-gray-300 truncate flex-1">{loc}</span>
+                              <span className="text-blue-400 font-bold ml-2">{observations.filter(o => o.location === loc).length}×</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── WISHLIST ─────────────────────────────────────────────── */}
+            {activeTab === 'wishlist' && (
+              <div className="space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-2xl font-bold flex items-center gap-2"><BookmarkPlus size={24} /> Observation Wishlist ({wishlist.length})</h2>
+                  <div className="flex gap-2">
+                    {(['all','high','medium','low'] as const).map(p => (
+                      <button key={p} onClick={() => setWishlistFilter(p)} className={`px-3 py-1 rounded text-sm capitalize ${wishlistFilter === p ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}>{p}</button>
+                    ))}
+                    <button onClick={() => setShowWishlistForm(true)} className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm flex items-center gap-1"><Plus size={14} /> Add</button>
+                  </div>
+                </div>
+
+                {filteredWishlist.length === 0 ? (
+                  <div className="bg-gray-800 rounded-lg p-8 text-center">
+                    <div className="text-5xl mb-3">📋</div>
+                    <p className="text-gray-400">Your wishlist is empty. Add objects you want to observe!</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredWishlist.map(item => (
+                      <div key={item.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="font-bold text-blue-400">{item.name}</h3>
+                          <span className={`text-xs px-2 py-0.5 rounded-full text-white capitalize ml-2 ${priorityColor(item.priority)}`}>{item.priority}</span>
+                        </div>
+                        <p className="text-sm text-gray-400 capitalize mb-1">{item.type}</p>
+                        {item.notes && <p className="text-sm text-gray-300 mb-3">{item.notes}</p>}
+                        <p className="text-xs text-gray-500 mb-3">Added: {item.dateAdded.split('T')[0]}</p>
+                        <div className="flex gap-2">
+                          <button onClick={() => moveWishlistToObservation(item)} className="flex-1 bg-blue-600 hover:bg-blue-700 px-2 py-1.5 rounded text-xs flex items-center justify-center gap-1">
+                            <Plus size={12} /> Mark Observed
+                          </button>
+                          <button onClick={() => setWishlist(wl => wl.filter(w => w.id !== item.id))} className="bg-red-700 hover:bg-red-600 px-2 py-1.5 rounded text-xs">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Wishlist form modal */}
+                {showWishlistForm && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold">Add to Wishlist</h3>
+                        <button onClick={() => setShowWishlistForm(false)} className="text-gray-400 hover:text-white"><X size={22} /></button>
+                      </div>
+                      <form onSubmit={handleAddWishlist} className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Object Name</label>
+                          <input type="text" value={wishlistForm.name} onChange={e => setWishlistForm({ ...wishlistForm, name: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" required />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Type</label>
+                            <select value={wishlistForm.type} onChange={e => setWishlistForm({ ...wishlistForm, type: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input">
+                              <option value="star">Star</option>
+                              <option value="galaxy">Galaxy</option>
+                              <option value="cluster">Cluster</option>
+                              <option value="nebula">Nebula</option>
+                              <option value="planet">Planet</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Priority</label>
+                            <select value={wishlistForm.priority} onChange={e => setWishlistForm({ ...wishlistForm, priority: e.target.value as any })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input">
+                              <option value="high">🔴 High</option>
+                              <option value="medium">🟡 Medium</option>
+                              <option value="low">🟢 Low</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Notes</label>
+                          <textarea value={wishlistForm.notes} onChange={e => setWishlistForm({ ...wishlistForm, notes: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" rows={2} placeholder="Why do you want to observe this?" />
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                          <button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded flex items-center justify-center gap-2"><Save size={16} /> Save</button>
+                          <button type="button" onClick={() => setShowWishlistForm(false)} className="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded">Cancel</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── ISS ─────────────────────────────────────────────────── */}
+            {activeTab === 'iss' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold flex items-center gap-2"><Radio size={24} /> ISS Tracker</h2>
+
+                {issLoading && !issData && <div className="text-gray-400">Fetching ISS position...</div>}
+
+                {issData && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-lg font-bold mb-4">🛸 Current ISS Position</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Latitude</span>
+                          <span className="font-mono text-green-400">{issData.latitude.toFixed(4)}°</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Longitude</span>
+                          <span className="font-mono text-green-400">{issData.longitude.toFixed(4)}°</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Altitude</span>
+                          <span className="font-mono text-blue-400">{issData.altitude.toFixed(1)} km</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Speed</span>
+                          <span className="font-mono text-blue-400">{(issData.velocity).toFixed(0)} km/h</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Daylight</span>
+                          <span className={`font-bold ${issData.visibility === 'daylight' ? 'text-yellow-400' : 'text-indigo-400'}`}>{issData.visibility === 'daylight' ? '☀️ Daylight' : '🌑 Eclipsed'}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-gray-700 pt-3">
+                          <span className="text-gray-400">Visible from {placeName.split(',')[0]}</span>
+                          <span className={`font-bold ${issAboveHorizon ? 'text-green-400' : 'text-red-400'}`}>{issAboveHorizon ? '✅ Above horizon' : '❌ Below horizon'}</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-4">Updates every 10 seconds · Source: wheretheiss.at</p>
+                    </div>
+
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h3 className="text-lg font-bold mb-4">📅 Pass Predictions</h3>
+                      <p className="text-gray-300 text-sm mb-4">See when the ISS will pass over your location and how bright it will be:</p>
+                      <div className="space-y-3">
+                        <a href={`https://heavens-above.com/PassSummary.aspx?satid=25544&lat=${userLocation.lat}&lng=${userLocation.lng}&loc=MyLocation&alt=0&tz=UCT`} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-medium">
+                          🔍 Heavens Above — Pass times
+                        </a>
+                        <a href={`https://spotthestation.nasa.gov/sightings/view.cfm?country=Portugal`} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-lg font-medium">
+                          🚀 NASA Spot the Station
+                        </a>
+                        <a href={`https://www.n2yo.com/satellite/?s=25544`} target="_blank" rel="noopener noreferrer" className="block w-full text-center bg-gray-600 hover:bg-gray-500 px-4 py-3 rounded-lg font-medium">
+                          🗺️ N2YO Live Map
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live map embed */}
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <h3 className="text-lg font-bold mb-4">🗺️ Live ISS Map</h3>
+                  <iframe
+                    src="https://www.n2yo.com/widget/?s=25544&t=ISS&c=00000&i=1"
+                    width="100%"
+                    height="400"
+                    frameBorder="0"
+                    scrolling="no"
+                    title="ISS Live Map"
+                    className="rounded"
+                    style={{ border: '1px solid #444', minHeight: 300 }}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">Source: N2YO.com</p>
+                </div>
+              </div>
+            )}
+
+            {/* ── RESOURCES ────────────────────────────────────────────── */}
             {activeTab === 'resources' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Astronomical Resources</h2>
@@ -1157,36 +1239,36 @@ const AstroObservationApp = () => {
                       <li><a href="https://www.timeanddate.com/moon/phases/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Moon Phases</a></li>
                       <li><a href="https://stellarium-web.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Stellarium Web</a></li>
                       <li><a href="https://www.heavens-above.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Heavens Above</a></li>
+                      <li><a href="https://clearoutside.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Clear Outside</a></li>
                     </ul>
                   </div>
                 </div>
                 <div className="meteoblue-widgets flex flex-wrap gap-4 mt-8">
-                  <div className="max-w-[480px] flex-shrink-0" style={{ width: 480 }}>
-                    <iframe title="Previsão do tempo meteoblue" src="https://www.meteoblue.com/pt/tempo/widget/three?geoloc=detect&nocurrent=0&noforecast=0&days=4&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&layout=image" frameBorder="0" scrolling="no" allowTransparency={true} sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" className="w-full" style={{ height: 590 }}></iframe>
-                    <div><a href="https://www.meteoblue.com/pt/tempo/semana/index?utm_source=three_widget&utm_medium=linkus&utm_content=three&utm_campaign=Weather%2BWidget" target="_blank" rel="noopener noreferrer">meteoblue</a></div>
+                  <div className="flex-shrink-0" style={{ width: 480 }}>
+                    <iframe title="Meteoblue Forecast" src="https://www.meteoblue.com/pt/tempo/widget/three?geoloc=detect&nocurrent=0&noforecast=0&days=4&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&layout=image" frameBorder="0" scrolling="no" allowTransparency={true} sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" className="w-full" style={{ height: 590 }}></iframe>
+                    <div><a href="https://www.meteoblue.com" target="_blank" rel="noopener noreferrer">meteoblue</a></div>
                   </div>
-                  <div className="max-w-[540px] flex-shrink-0" style={{ width: 540 }}>
-                    <iframe title="Observação meteoblue" src="https://www.meteoblue.com/pt/tempo/widget/seeing?geoloc=detect&noground=0" frameBorder="0" scrolling="no" allowTransparency={true} sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" className="w-full" style={{ height: 775 }}></iframe>
-                    <div><a href="https://www.meteoblue.com/pt/tempo/previsao/seeing?utm_source=seeing_widget&utm_medium=linkus&utm_content=seeing&utm_campaign=Weather%2BWidget" target="_blank" rel="noopener noreferrer">meteoblue</a></div>
+                  <div className="flex-shrink-0" style={{ width: 540 }}>
+                    <iframe title="Meteoblue Seeing" src="https://www.meteoblue.com/pt/tempo/widget/seeing?geoloc=detect&noground=0" frameBorder="0" scrolling="no" allowTransparency={true} sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" className="w-full" style={{ height: 775 }}></iframe>
+                    <div><a href="https://www.meteoblue.com" target="_blank" rel="noopener noreferrer">meteoblue</a></div>
                   </div>
-                  <div className="max-w-[520px] flex-shrink-0" style={{ width: 520 }}>
-                    <iframe title="Mapa meteoblue" src="https://www.meteoblue.com/pt/tempo/mapas/widget?windAnimation=1&gust=1&satellite=1&cloudsAndPrecipitation=1&temperature=1&sunshine=1&extremeForecastIndex=1&geoloc=detect&tempunit=C&windunit=km%252Fh&lengthunit=metric&zoom=5&autowidth=manu" frameBorder="0" scrolling="no" allowTransparency={true} sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" className="w-full" style={{ height: 720 }}></iframe>
-                    <div><a href="https://www.meteoblue.com/pt/tempo/mapas/index?utm_source=map_widget&utm_medium=linkus&utm_content=map&utm_campaign=Weather%2BWidget" target="_blank" rel="noopener noreferrer">meteoblue</a></div>
+                  <div className="flex-shrink-0" style={{ width: 520 }}>
+                    <iframe title="Meteoblue Map" src="https://www.meteoblue.com/pt/tempo/mapas/widget?windAnimation=1&gust=1&satellite=1&cloudsAndPrecipitation=1&temperature=1&sunshine=1&extremeForecastIndex=1&geoloc=detect&tempunit=C&windunit=km%252Fh&lengthunit=metric&zoom=5&autowidth=manu" frameBorder="0" scrolling="no" allowTransparency={true} sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" className="w-full" style={{ height: 720 }}></iframe>
+                    <div><a href="https://www.meteoblue.com" target="_blank" rel="noopener noreferrer">meteoblue</a></div>
                   </div>
                 </div>
-                <div className="mt-8">
-                  {userLocation && (
-                    <div className="bg-gray-800 rounded-lg p-4">
-                      <h3 className="text-lg font-bold mb-4">Clear Outside Forecast</h3>
-                      <a href={`https://clearoutside.com/forecast/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}`} target="_blank" rel="noopener noreferrer">
-                        <img src={`https://clearoutside.com/forecast_image_large/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}/forecast.png`} alt="Clear Outside Forecast" style={{ width: '100%', maxWidth: 800 }} />
-                      </a>
-                    </div>
-                  )}
-                </div>
+                {userLocation && (
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <h3 className="text-lg font-bold mb-4">Clear Outside Forecast</h3>
+                    <a href={`https://clearoutside.com/forecast/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}`} target="_blank" rel="noopener noreferrer">
+                      <img src={`https://clearoutside.com/forecast_image_large/${userLocation.lat.toFixed(2)}/${userLocation.lng.toFixed(2)}/forecast.png`} alt="Clear Outside" style={{ width: '100%', maxWidth: 800 }} />
+                    </a>
+                  </div>
+                )}
               </div>
             )}
 
+            {/* ── LINKS ────────────────────────────────────────────────── */}
             {activeTab === 'links' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Useful Links</h2>
@@ -1194,261 +1276,334 @@ const AstroObservationApp = () => {
                   <div className="bg-gray-800 rounded-lg p-6">
                     <h3 className="text-lg font-bold mb-4">Space Agencies</h3>
                     <ul className="space-y-2">
-                      <li><a href="https://www.nasa.gov" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">NASA</a></li>
-                      <li><a href="https://www.esa.int" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">ESA</a></li>
-                      <li><a href="https://www.seti.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">SETI</a></li>
-                      <li><a href="https://www.cnsa.gov.cn" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">CNSA</a></li>
-                      <li><a href="https://www.gov.br/aeb/pt-br" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">AEB</a></li>
-                      <li><a href="https://ptspace.pt/pt/home/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">AEP (Portugal)</a></li>
-                      <li><a href="https://www.asc-csa.gc.ca" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">CSA</a></li>
-                      <li><a href="https://www.isro.gov.in" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">ISRO</a></li>
+                      {[['NASA','https://www.nasa.gov'],['ESA','https://www.esa.int'],['SETI','https://www.seti.org'],['CNSA','https://www.cnsa.gov.cn'],['AEB','https://www.gov.br/aeb/pt-br'],['AEP (Portugal)','https://ptspace.pt/pt/home/'],['CSA','https://www.asc-csa.gc.ca'],['ISRO','https://www.isro.gov.in']].map(([l,u])=>(
+                        <li key={l}><a href={u} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">{l}</a></li>
+                      ))}
                     </ul>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-6">
                     <h3 className="text-lg font-bold mb-4">Commercial Space</h3>
                     <ul className="space-y-2">
-                      <li><a href="https://www.spacex.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">SpaceX</a></li>
-                      <li><a href="https://www.arianespace.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Ariane</a></li>
-                      <li><a href="https://www.blueorigin.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Blue Origin</a></li>
+                      {[['SpaceX','https://www.spacex.com'],['Ariane','https://www.arianespace.com'],['Blue Origin','https://www.blueorigin.com'],['Rocket Lab','https://www.rocketlabusa.com'],['Virgin Galactic','https://www.virgingalactic.com']].map(([l,u])=>(
+                        <li key={l}><a href={u} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">{l}</a></li>
+                      ))}
                     </ul>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-6">
                     <h3 className="text-lg font-bold mb-4">Astronomical Societies</h3>
                     <ul className="space-y-2">
-                      <li><a href="https://a4e.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Astronomers for Planet Earth</a></li>
-                      <li><a href="https://astronomerswithoutborders.org/home" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Astronomers Without Borders</a></li>
-                      <li><a href="https://www.iau.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">International Astronomical Union</a></li>
-                      <li><a href="https://www.imo.net/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">International Meteor Organization</a></li>
-                      <li><a href="https://www.planetary.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">The Planetary Society</a></li>
-                      <li><a href="https://eas.unige.ch/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">European Astronomical Society</a></li>
-                      <li><a href="https://www.eaae-astronomy.org/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">European Association for Astronomy Education</a></li>
-                      <li><a href="https://en.wikipedia.org/wiki/List_of_astronomical_societies" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Wiki List of astronomical societies</a></li>
+                      {[['Astronomers for Planet Earth','https://a4e.org/'],['Astronomers Without Borders','https://astronomerswithoutborders.org/home'],['International Astronomical Union','https://www.iau.org/'],['International Meteor Organization','https://www.imo.net/'],['The Planetary Society','https://www.planetary.org/'],['European Astronomical Society','https://eas.unige.ch/']].map(([l,u])=>(
+                        <li key={l}><a href={u} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">{l}</a></li>
+                      ))}
                     </ul>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* ── CALENDAR ─────────────────────────────────────────────── */}
             {activeTab === 'calendar' && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Observations and next events</h2>
+                <h2 className="text-2xl font-bold">Observations & Events</h2>
                 <div className="flex flex-col lg:flex-row gap-8 w-full">
-                  <div className="bg-gray-800 rounded-lg p-6 flex-1 min-w-[320px]" style={{ maxWidth: 500, width: '100%' }}>
+                  <div className="bg-gray-800 rounded-lg p-6 flex-1 min-w-[320px]" style={{ maxWidth: 500 }}>
                     <div className="flex items-center justify-between mb-4">
                       <button onClick={() => navigateCalendar('prev')} className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700">←</button>
                       <h3 className="text-xl font-bold">{calendarDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })}</h3>
                       <button onClick={() => navigateCalendar('next')} className="text-2xl hover:text-blue-400 p-2 rounded hover:bg-gray-700">→</button>
                     </div>
-                    <div className="grid grid-cols-7 gap-2">
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                        <div key={day} className="text-center font-bold p-2 text-gray-400">{day}</div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+                        <div key={d} className="text-center font-bold p-1 text-gray-400 text-xs">{d}</div>
                       ))}
-                      {getDaysInMonth(calendarDate).map((day, index) => {
+                      {getDaysInMonth(calendarDate).map((day, idx) => {
                         const isToday = day === new Date().getDate() && calendarDate.getMonth() === new Date().getMonth() && calendarDate.getFullYear() === new Date().getFullYear();
-                        const hasObs = day && getObservationsForDay(calendarDate, day).length > 0;
+                        const hasObs = day ? getObservationsForDay(calendarDate, day).length > 0 : false;
+                        const hasEvent = day ? getEventsForDay(calendarDate, day).length > 0 : false;
                         return (
-                          <div
-                            key={index}
-                            className={`text-center p-2 rounded cursor-pointer min-h-[40px] flex items-center justify-center ${day ? 'hover:bg-gray-700' : ''} ${isToday ? 'bg-blue-600 text-white' : ''} ${hasObs ? 'ring-2 ring-green-400' : ''} ${calendarSelectedDay === day ? 'bg-green-700 text-white' : ''}`}
-                            onClick={() => day && setCalendarSelectedDay(day)}
-                          >
+                          <div key={idx} onClick={() => day && setCalendarSelectedDay(day)}
+                            className={`text-center p-1 rounded cursor-pointer min-h-[36px] flex flex-col items-center justify-center text-sm ${day ? 'hover:bg-gray-700' : ''} ${isToday ? 'bg-blue-600 text-white' : ''} ${calendarSelectedDay === day ? 'bg-green-700 text-white' : ''}`}>
                             {day || ''}
+                            <div className="flex gap-0.5 mt-0.5">
+                              {hasObs && <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" title="Has observations" />}
+                              {hasEvent && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block" title="Has events" />}
+                            </div>
                           </div>
                         );
                       })}
                     </div>
-                    {calendarSelectedDay && (
-                      <div className="mt-6">
-                        <h4 className="font-bold mb-2">Observations for {calendarDate.getFullYear()}-{(calendarDate.getMonth() + 1).toString().padStart(2, '0')}-{calendarSelectedDay.toString().padStart(2, '0')}</h4>
-                        {getObservationsForDay(calendarDate, calendarSelectedDay).length === 0 ? (
-                          <div className="text-gray-400">No observations for this day.</div>
-                        ) : (
-                          <ul className="space-y-2">
-                            {getObservationsForDay(calendarDate, calendarSelectedDay).map(obs => (
-                              <li key={obs.id} className="bg-gray-700 p-3 rounded cursor-pointer hover:ring-2 hover:ring-blue-400" onClick={() => { setSelectedObservation(obs); setShowDetailModal(true); }}>
-                                <span className="font-bold text-blue-300">{obs.name}</span> ({obs.type})
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    )}
+                    <div className="flex gap-4 mt-3 text-xs text-gray-400">
+                      <span><span className="w-2 h-2 rounded-full bg-green-400 inline-block mr-1" />Observations</span>
+                      <span><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block mr-1" />Astro events</span>
+                    </div>
+
+                    {calendarSelectedDay && (() => {
+                      const obs = getObservationsForDay(calendarDate, calendarSelectedDay);
+                      const evs = getEventsForDay(calendarDate, calendarSelectedDay);
+                      return (
+                        <div className="mt-4">
+                          <h4 className="font-bold mb-2 text-sm">
+                            {calendarDate.getFullYear()}-{(calendarDate.getMonth()+1).toString().padStart(2,'0')}-{calendarSelectedDay.toString().padStart(2,'0')}
+                          </h4>
+                          {evs.length > 0 && (
+                            <div className="mb-3">
+                              <div className="text-xs text-yellow-400 font-bold mb-1">🌠 Astro Events</div>
+                              {evs.map(ev => <div key={ev.id} className="text-sm text-yellow-200 bg-gray-700 p-2 rounded mb-1">{ev.name}</div>)}
+                            </div>
+                          )}
+                          {obs.length === 0 ? <div className="text-gray-400 text-sm">No observations for this day.</div> : (
+                            <ul className="space-y-1">
+                              {obs.map(o => (
+                                <li key={o.id} className="bg-gray-700 p-2 rounded cursor-pointer hover:ring-2 hover:ring-blue-400 text-sm" onClick={() => { setSelectedObservation(o); setShowDetailModal(true); }}>
+                                  <span className="font-bold text-blue-300">{o.name}</span> <span className="text-gray-400">({o.type})</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
-                  <div className="w-full max-w-[500px] max-h-[700px] overflow-y-auto bg-[#181c23] rounded-xl pt-0 pr-4 pb-4 pl-4 flex-shrink-0">
-                    {eventsLoading ? (
-                      <div className="text-gray-400">Loading events...</div>
-                    ) : (
-                      <EventList events={events} />
-                    )}
+
+                  <div className="w-full max-w-[500px] max-h-[700px] overflow-y-auto bg-[#181c23] rounded-xl p-4 flex-shrink-0">
+                    {eventsLoading ? <div className="text-gray-400">Loading events...</div> : <EventList events={events} />}
                   </div>
                 </div>
               </div>
             )}
 
+            {/* ── SOLAR ────────────────────────────────────────────────── */}
+            {activeTab === 'solar' && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold flex items-center gap-2">🪐 Solar System</h2>
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <iframe src="https://www.solarsystemscope.com/iframe" width="100%" height="600" style={{ minWidth: 300, minHeight: 400, border: "2px solid #0f5c6e", borderRadius: 8 }} title="Solar System Scope" frameBorder="0" allowFullScreen />
+                  <div className="text-xs text-gray-400 mt-2">Source: <a href="https://www.solarsystemscope.com" target="_blank" rel="noopener noreferrer" className="text-blue-400">Solar System Scope</a></div>
+                </div>
+              </div>
+            )}
+
+            {/* ── SETTINGS ─────────────────────────────────────────────── */}
             {activeTab === 'settings' && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold">Settings & Configuration</h2>
                 <div className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-bold mb-4">Data Management</h3>
-                  <div className="space-y-4 flex flex-col md:flex-row md:space-y-0 md:space-x-4">
-                    <button onClick={exportObservations} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center space-x-2">
-                      <Download size={16} />
-                      <span>Export Observations</span>
+                  <div className="flex flex-wrap gap-3">
+                    <button onClick={exportObservations} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded flex items-center gap-2">
+                      <Download size={16} /> Export Observations (JSON)
                     </button>
-                    <label className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded flex items-center space-x-2 cursor-pointer">
-                      <Upload size={16} />
-                      <span>Import Observations</span>
+                    <label className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded flex items-center gap-2 cursor-pointer">
+                      <Upload size={16} /> Import Observations
                       <input type="file" accept="application/json" onChange={handleImport} className="hidden" />
                     </label>
-                    <button className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded flex items-center space-x-2">
-                      <Save size={16} />
-                      <span>Download Backup</span>
+                    <button onClick={() => { if (window.confirm('Delete ALL observations? This cannot be undone.')) { setObservations([]); } }} className="bg-red-700 hover:bg-red-600 px-4 py-2 rounded flex items-center gap-2">
+                      <Trash2 size={16} /> Clear All Observations
                     </button>
                   </div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <h3 className="text-lg font-bold mb-4">Image Storage</h3>
+                  <p className="text-gray-300 text-sm mb-2">Images are stored locally in your browser (no external service needed). Each image is compressed to under 900px before saving.</p>
+                  <p className="text-gray-400 text-sm">Observations with images: <span className="text-blue-400 font-bold">{observations.filter(o => o.image).length}</span></p>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-6">
+                  <h3 className="text-lg font-bold mb-4">About AstroLog</h3>
+                  <p className="text-gray-400 text-sm">AstroLog — Personal Astronomy Observation Journal</p>
+                  <p className="text-gray-400 text-sm mt-1">Catalog: {brightStars.length} stars · {deepSkyObjects.length} deep sky objects · {exoplanets.length} exoplanets · 7 planets</p>
                 </div>
               </div>
             )}
+
           </main>
         </div>
 
+        {/* ── Add/Edit Observation Modal ───────────────────────────────── */}
         {showAddForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative ios-form" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto relative" style={{ WebkitOverflowScrolling: 'touch' }}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold">{editObservationId !== null ? 'Edit Observation' : 'Add Observation'}</h3>
-                <button onClick={() => { setShowAddForm(false); setEditObservationId(null); }} className="text-gray-400 hover:text-white">
-                  <X size={24} />
-                </button>
+                <button onClick={() => { setShowAddForm(false); setEditObservationId(null); }} className="text-gray-400 hover:text-white"><X size={24} /></button>
               </div>
               <form onSubmit={handleAddObservation} className="space-y-4">
+                {/* Name */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Object Name</label>
-                  <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Object name" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" required inputMode="text" />
+                  <label className="block text-sm font-medium mb-1">Object Name *</label>
+                  <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. M42, Sirius, Saturn" className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" required />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Type</label>
-                  <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input">
-                    <option value="star">Star</option>
-                    <option value="galaxy">Galaxy</option>
-                    <option value="cluster">Cluster</option>
-                    <option value="nebula">Nebula</option>
-                    <option value="planet">Planet</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Observation Date</label>
-                  <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Location</label>
-                  <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="Location" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
-                </div>
+                {/* Type + Date */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">RA</label>
-                    <input type="text" value={formData.ra} onChange={(e) => setFormData({ ...formData, ra: e.target.value })} placeholder="Right Ascension" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
+                    <label className="block text-sm font-medium mb-1">Type</label>
+                    <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input">
+                      <option value="star">Star</option>
+                      <option value="galaxy">Galaxy</option>
+                      <option value="cluster">Cluster</option>
+                      <option value="nebula">Nebula</option>
+                      <option value="planet">Planet</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">DEC</label>
-                    <input type="text" value={formData.dec} onChange={(e) => setFormData({ ...formData, dec: e.target.value })} placeholder="Declination" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
+                    <label className="block text-sm font-medium mb-1">Date</label>
+                    <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
                   </div>
                 </div>
+                {/* Location */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Magnitude</label>
-                  <input type="text" value={formData.magnitude} onChange={(e) => setFormData({ ...formData, magnitude: e.target.value })} placeholder="Magnitude" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
+                  <label className="block text-sm font-medium mb-1">Location</label>
+                  <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} placeholder="e.g. Dark site, Sintra" className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
                 </div>
+                {/* Equipment */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">🔭 Telescope / Binoculars</label>
+                    <input type="text" value={formData.equipment} onChange={e => setFormData({ ...formData, equipment: e.target.value })} placeholder="e.g. Dobson 8 inch, 10x50" className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">🔍 Eyepiece</label>
+                    <input type="text" value={formData.eyepiece} onChange={e => setFormData({ ...formData, eyepiece: e.target.value })} placeholder="e.g. 25mm, 10mm" className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
+                  </div>
+                </div>
+                {/* Seeing + Transparency */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Seeing (1–5)</label>
+                    <select value={formData.seeing} onChange={e => setFormData({ ...formData, seeing: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input">
+                      <option value="">— Select —</option>
+                      <option value="1">1 — Very Poor</option>
+                      <option value="2">2 — Poor</option>
+                      <option value="3">3 — Fair</option>
+                      <option value="4">4 — Good</option>
+                      <option value="5">5 — Excellent</option>
+                    </select>
+                    {formData.seeing && <p className="text-xs text-yellow-400 mt-0.5">{starsDisplay(formData.seeing)}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Transparency (1–5)</label>
+                    <select value={formData.transparency} onChange={e => setFormData({ ...formData, transparency: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input">
+                      <option value="">— Select —</option>
+                      <option value="1">1 — Overcast</option>
+                      <option value="2">2 — Mostly Cloudy</option>
+                      <option value="3">3 — Partly Clear</option>
+                      <option value="4">4 — Mostly Clear</option>
+                      <option value="5">5 — Crystal Clear</option>
+                    </select>
+                    {formData.transparency && <p className="text-xs text-blue-400 mt-0.5">{starsDisplay(formData.transparency)}</p>}
+                  </div>
+                </div>
+                {/* RA / Dec / Magnitude */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">RA</label>
+                    <input type="text" value={formData.ra} onChange={e => setFormData({ ...formData, ra: e.target.value })} placeholder="Right Asc." className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">DEC</label>
+                    <input type="text" value={formData.dec} onChange={e => setFormData({ ...formData, dec: e.target.value })} placeholder="Declination" className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Magnitude</label>
+                    <input type="text" value={formData.magnitude} onChange={e => setFormData({ ...formData, magnitude: e.target.value })} placeholder="e.g. 5.6" className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
+                  </div>
+                </div>
+                {/* Distance */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Distance</label>
-                  <div className="flex space-x-2">
-                    <input type="text" value={formData.distance} onChange={(e) => setFormData({ ...formData, distance: e.target.value })} placeholder="Distance" className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
-                    <select value={formData.distanceUnit} onChange={(e) => setFormData({ ...formData, distanceUnit: e.target.value })} className="p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input">
+                  <label className="block text-sm font-medium mb-1">Distance</label>
+                  <div className="flex gap-2">
+                    <input type="text" value={formData.distance} onChange={e => setFormData({ ...formData, distance: e.target.value })} placeholder="Distance value" className="flex-1 p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
+                    <select value={formData.distanceUnit} onChange={e => setFormData({ ...formData, distanceUnit: e.target.value })} className="p-2 bg-gray-700 rounded border border-gray-600 ios-input">
                       <option value="ly">Light Years</option>
-                      <option value="Mly">Million Light Years</option>
+                      <option value="Mly">Million ly</option>
                       <option value="pc">Parsecs</option>
                       <option value="AU">AU</option>
                       <option value="km">km</option>
                     </select>
                   </div>
                 </div>
+                {/* Description */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Description</label>
-                  <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" rows={3} placeholder="Notes about your observation..." />
+                  <label className="block text-sm font-medium mb-1">Notes / Description</label>
+                  <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" rows={3} placeholder="What did you see? Colors, detail, conditions..." />
                 </div>
+                {/* Image URL */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Image URL</label>
-                  <input type="text" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" placeholder="Paste image link here (e.g., from iCloud, Imgur, etc.)" />
+                  <label className="block text-sm font-medium mb-1">Image URL (optional)</label>
+                  <input type="text" value={formData.image.startsWith('data:') ? '' : formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" placeholder="Paste a URL from iCloud, Dropbox, etc." />
+                </div>
+                {/* Upload */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Upload Image (stored locally, no account needed)</label>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" />
                 </div>
                 {formData.image && (
-                  <div className="mt-2">
-                    <img src={formData.image} alt="Observation" className="max-h-48 rounded border border-gray-600" style={{ maxWidth: "100%" }} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                  <div className="relative">
+                    <img src={formData.image} alt="Preview" className="w-full h-32 object-cover rounded" onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                    <button type="button" onClick={() => setFormData({ ...formData, image: '' })} className="absolute top-1 right-1 bg-red-700 rounded-full p-0.5"><X size={14} /></button>
                   </div>
                 )}
-                <div className="flex items-center space-x-2">
-                  <input type="checkbox" id="favorite" checked={formData.favorite} onChange={(e) => setFormData({ ...formData, favorite: e.target.checked })} className="rounded" />
-                  <label htmlFor="favorite" className="text-sm">Mark as Favorite ⭐</label>
+                {/* Favorite */}
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="fav" checked={formData.favorite} onChange={e => setFormData({ ...formData, favorite: e.target.checked })} className="rounded" />
+                  <label htmlFor="fav" className="text-sm">Mark as Favorite ⭐</label>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Upload Image</label>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full p-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 ios-input" />
-                  {formData.image && (
-                    <img src={formData.image} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-lg" />
-                  )}
-                </div>
-                <div className="flex space-x-4 pt-4">
-                  <button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded flex items-center justify-center space-x-2">
-                    <Save size={16} />
-                    <span>Save</span>
-                  </button>
-                  <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded">
-                    Cancel
-                  </button>
+                {/* Buttons */}
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded flex items-center justify-center gap-2"><Save size={16} /> Save</button>
+                  <button type="button" onClick={() => { setShowAddForm(false); setEditObservationId(null); }} className="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded">Cancel</button>
                 </div>
               </form>
             </div>
           </div>
         )}
 
+        {/* ── Detail Modal ─────────────────────────────────────────────── */}
         {showDetailModal && selectedObservation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto relative" style={{ WebkitOverflowScrolling: 'touch' }}>
-              <button onClick={() => setShowDetailModal(false)} className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl" aria-label="Fechar">&times;</button>
-              <div className="space-y-2">
-                <div className="font-bold text-lg text-blue-400">{selectedObservation.name}</div>
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative">
+              <button onClick={() => setShowDetailModal(false)} className="absolute top-3 right-3 text-gray-400 hover:text-white"><X size={22} /></button>
+              <div className="space-y-2 pr-6">
+                <h2 className="font-bold text-xl text-blue-400">{selectedObservation.name}</h2>
                 {selectedObservation.image && (
-                  <div className="mb-3">
-                    <img src={selectedObservation.image} alt={selectedObservation.name} className="w-full h-48 object-cover rounded-lg hover:opacity-80 cursor-pointer" onClick={() => handleImageClick(selectedObservation.image)} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-                  </div>
+                  <img src={selectedObservation.image} alt={selectedObservation.name} className="w-full h-48 object-cover rounded cursor-pointer hover:opacity-80" onClick={() => handleImageClick(selectedObservation.image)} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                 )}
-                <div className="text-sm text-gray-300">Type: {selectedObservation.type}</div>
-                <div className="text-sm text-gray-300">Date: {selectedObservation.date}</div>
-                <div className="text-sm text-gray-300">Location: {selectedObservation.location}</div>
-                {selectedObservation.magnitude && <div className="text-sm text-gray-300">Magnitude: {selectedObservation.magnitude}</div>}
-                {selectedObservation.ra && <div className="text-sm text-gray-300">RA: {selectedObservation.ra} | Dec: {selectedObservation.dec}</div>}
-                {selectedObservation.distance && <div className="text-sm text-gray-300">Distance: {selectedObservation.distance} {selectedObservation.distanceUnit}</div>}
-                {selectedObservation.description && <div className="text-sm text-gray-400 mt-2">{selectedObservation.description}</div>}
-                {selectedObservation.favorite && <div className="text-yellow-400">⭐ Favorite</div>}
-                <button className="mt-4 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded flex items-center space-x-2" onClick={() => { setEditObservationId(selectedObservation.id); setShowDetailModal(false); }} type="button">
-                  <Edit size={16} />
-                  <span>Edit</span>
-                </button>
-                <button className="mt-4 bg-red-600 hover:bg-red-700 px-4 py-2 rounded flex items-center space-x-2" onClick={() => { if (window.confirm("Delete this observation?")) { setObservations(obs => obs.filter(o => o.id !== selectedObservation.id)); setShowDetailModal(false); } }} type="button">
-                  <X size={16} />
-                  <span>Delete</span>
-                </button>
+                <div className="grid grid-cols-2 gap-1 text-sm">
+                  <span className="text-gray-400">Type:</span><span className="capitalize">{selectedObservation.type}</span>
+                  <span className="text-gray-400">Date:</span><span>{selectedObservation.date}</span>
+                  {selectedObservation.location && <><span className="text-gray-400">Location:</span><span>{selectedObservation.location}</span></>}
+                  {selectedObservation.equipment && <><span className="text-gray-400">Telescope:</span><span>{selectedObservation.equipment}</span></>}
+                  {selectedObservation.eyepiece && <><span className="text-gray-400">Eyepiece:</span><span>{selectedObservation.eyepiece}</span></>}
+                  {selectedObservation.seeing && <><span className="text-gray-400">Seeing:</span><span className="text-yellow-400">{starsDisplay(selectedObservation.seeing)} ({seeingLabel(selectedObservation.seeing)})</span></>}
+                  {selectedObservation.transparency && <><span className="text-gray-400">Transparency:</span><span className="text-blue-400">{starsDisplay(selectedObservation.transparency)} ({transparencyLabel(selectedObservation.transparency)})</span></>}
+                  {selectedObservation.magnitude && <><span className="text-gray-400">Magnitude:</span><span>{selectedObservation.magnitude}</span></>}
+                  {selectedObservation.ra && <><span className="text-gray-400">RA / Dec:</span><span>{selectedObservation.ra} / {selectedObservation.dec}</span></>}
+                  {selectedObservation.distance && <><span className="text-gray-400">Distance:</span><span>{selectedObservation.distance} {selectedObservation.distanceUnit}</span></>}
+                </div>
+                {selectedObservation.description && <p className="text-sm text-gray-300 border-t border-gray-700 pt-2 mt-2">{selectedObservation.description}</p>}
+                {selectedObservation.favorite && <p className="text-yellow-400">⭐ Favorite</p>}
+                <div className="flex gap-2 flex-wrap mt-3">
+                  <a href={simbadUrl(selectedObservation.name)} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">SIMBAD</a>
+                  <span className="text-gray-600">·</span>
+                  <a href={wikipediaUrl(selectedObservation.name)} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">Wikipedia</a>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button className="flex-1 bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded flex items-center justify-center gap-1 text-sm" onClick={() => { setEditObservationId(selectedObservation.id); setShowDetailModal(false); }}><Edit size={14} /> Edit</button>
+                  <button className="flex-1 bg-red-700 hover:bg-red-600 px-3 py-2 rounded flex items-center justify-center gap-1 text-sm" onClick={() => { if (window.confirm('Delete this observation?')) { setObservations(obs => obs.filter(o => o.id !== selectedObservation.id)); setShowDetailModal(false); } }}><Trash2 size={14} /> Delete</button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* ── Notifications ────────────────────────────────────────────── */}
         {showSuccess && (
-          <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
-            ✅ Observation added successfully
+          <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
+            ✅ Observation saved successfully
           </div>
         )}
-
         {notification && (
-          <div className={`fixed bottom-16 right-4 px-4 py-2 rounded-lg shadow-lg text-white ${notification.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
+          <div className={`fixed bottom-16 right-4 px-4 py-2 rounded-lg shadow-lg text-white z-50 ${notification.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
             {notification.type === 'error' ? '⚠️' : '✅'} {notification.message}
           </div>
         )}
