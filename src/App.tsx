@@ -294,6 +294,8 @@ const AstroObservationApp = () => {
   const [issLoading, setIssLoading] = useState(false);
   const [issAboveHorizon, setIssAboveHorizon] = useState(false);
   const [issHistory, setIssHistory] = useState<{lat: number, lng: number}[]>([]);
+  const [tiangongData, setTiangongData] = useState<ISSData | null>(null);
+  const [tiangongHistory, setTiangongHistory] = useState<{lat: number, lng: number}[]>([]);
 
   const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
     setNotification({ message, type });
@@ -401,6 +403,15 @@ const AstroObservationApp = () => {
           }
         } catch { /* both APIs failed */ }
       }
+      // Tiangong (CSS) — NORAD 48274
+      try {
+        const tRes = await fetch('https://api.wheretheiss.at/v1/satellites/48274');
+        if (tRes.ok) {
+          const tData: ISSData = await tRes.json();
+          setTiangongData(tData);
+          setTiangongHistory(prev => [...prev.slice(-50), {lat: tData.latitude, lng: tData.longitude}]);
+        }
+      } catch { /* Tiangong API failed */ }
       setIssLoading(false);
     };
     fetchISS();
@@ -1218,9 +1229,39 @@ const AstroObservationApp = () => {
                   </div>
                 )}
 
+                {/* Tiangong info panel */}
+                {tiangongData && (
+                  <div className="bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-lg font-bold mb-4">🐉 Tiangong (CSS) — Estação Espacial Chinesa</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-400 block">Latitude</span>
+                        <span className="font-mono text-orange-400">{tiangongData.latitude.toFixed(4)}°</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block">Longitude</span>
+                        <span className="font-mono text-orange-400">{tiangongData.longitude.toFixed(4)}°</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block">Altitude</span>
+                        <span className="font-mono text-blue-400">{tiangongData.altitude.toFixed(1)} km</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400 block">Velocidade</span>
+                        <span className="font-mono text-blue-400">{tiangongData.velocity.toFixed(0)} km/h</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex gap-3 flex-wrap">
+                      <a href={`https://heavens-above.com/PassSummary.aspx?satid=48274&lat=${userLocation.lat}&lng=${userLocation.lng}&loc=MyLocation&alt=0&tz=UCT`} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-400 hover:underline">📅 Passagens da Tiangong (Heavens Above)</a>
+                      <a href="https://www.n2yo.com/satellite/?s=48274" target="_blank" rel="noopener noreferrer" className="text-xs text-orange-400 hover:underline">🗺️ N2YO — Tiangong</a>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">NORAD ID 48274 · Atualiza a cada 10s</p>
+                  </div>
+                )}
+
                 {/* Live map — built-in SVG, no external dependencies */}
                 <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-4">🗺️ Live ISS Position Map</h3>
+                  <h3 className="text-lg font-bold mb-4">🗺️ Live Space Station Map — ISS & Tiangong</h3>
                   {/* Distance & approach info */}
                   {issData && issHistory.length >= 2 && (() => {
                     const distNow = haversineKm(userLocation.lat, userLocation.lng, issData.latitude, issData.longitude);
@@ -1301,12 +1342,39 @@ const AstroObservationApp = () => {
                           <text x={issData.longitude + 180 + 8} y={90-issData.latitude+3} fill="#00ff88" fontSize="6" fontWeight="bold">ISS</text>
                         </g>
                       )}
+                      {/* Tiangong trail */}
+                      {tiangongHistory.length > 1 && (() => {
+                        const pts = tiangongHistory.map(p => `${(p.lng + 180).toFixed(1)},${(90 - p.lat).toFixed(1)}`);
+                        return <polyline points={pts.join(' ')} fill="none" stroke="#ff6633" strokeWidth="1.5" strokeOpacity="0.5" strokeLinecap="round" strokeLinejoin="round" />;
+                      })()}
+                      {/* Tiangong direction arrow */}
+                      {tiangongHistory.length >= 2 && (() => {
+                        const last = tiangongHistory[tiangongHistory.length - 1];
+                        const prev = tiangongHistory[tiangongHistory.length - 2];
+                        const x = (last.lng + 180);
+                        const y = 90 - last.lat;
+                        const px = (prev.lng + 180);
+                        const py = 90 - prev.lat;
+                        const angle = Math.atan2(y - py, x - px) * 180 / Math.PI;
+                        return <polygon points="-5,-3 5,0 -5,3" fill="#ff6633" opacity="0.9" transform={`translate(${x},${y}) rotate(${angle})`} />;
+                      })()}
+                      {/* Tiangong dot */}
+                      {tiangongData && (
+                        <g>
+                          <circle cx={tiangongData.longitude + 180} cy={90-tiangongData.latitude} r="14" fill="none" stroke="#ff663335" strokeWidth="1" strokeDasharray="3,2" />
+                          <circle cx={tiangongData.longitude + 180} cy={90-tiangongData.latitude} r="5" fill="#ff6633" stroke="white" strokeWidth="1.5">
+                            <animate attributeName="opacity" values="1;0.5;1" dur="2.5s" repeatCount="indefinite" />
+                          </circle>
+                          <text x={tiangongData.longitude + 180 + 8} y={90-tiangongData.latitude+3} fill="#ff6633" fontSize="6" fontWeight="bold">Tiangong</text>
+                        </g>
+                      )}
                     </svg>
                     <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-400">
                       <span><span className="text-green-400">●</span> ISS</span>
-                      <span><span className="text-red-400">●</span> You</span>
-                      <span><span className="text-green-600">──</span> Trail</span>
-                      <span><span className="text-green-900">╌╌</span> Predicted (~5 min)</span>
+                      <span><span style={{color:'#ff6633'}}>●</span> Tiangong</span>
+                      <span><span className="text-red-400">●</span> Tu</span>
+                      <span><span className="text-green-600">──</span> ISS Trail</span>
+                      <span><span style={{color:'#ff6633'}}>──</span> Tiangong Trail</span>
                       <span>▶ Direction</span>
                     </div>
                     {issData && (
