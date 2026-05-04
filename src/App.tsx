@@ -296,6 +296,9 @@ const AstroObservationApp = () => {
   const [issHistory, setIssHistory] = useState<{lat: number, lng: number}[]>([]);
   const [tiangongData, setTiangongData] = useState<ISSData | null>(null);
   const [tiangongHistory, setTiangongHistory] = useState<{lat: number, lng: number}[]>([]);
+  // PWA install prompt
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [pwaInstalled, setPwaInstalled] = useState(false);
 
   const showNotification = (message: string, type: 'success' | 'error' = 'error') => {
     setNotification({ message, type });
@@ -317,6 +320,21 @@ const AstroObservationApp = () => {
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Register service worker for PWA (offline + installable)
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/AstroLogs/sw.js').catch(() => {});
+      });
+    }
+    // Listen for browser install prompt
+    const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    // Detect if already installed
+    window.addEventListener('appinstalled', () => { setPwaInstalled(true); setDeferredPrompt(null); });
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   useEffect(() => {
@@ -764,6 +782,22 @@ const AstroObservationApp = () => {
                   >
                     <Plus size={22} />
                   </button>
+                  {/* PWA install button — only shown when browser supports it */}
+                  {deferredPrompt && !pwaInstalled && (
+                    <button
+                      onClick={async () => {
+                        if (!deferredPrompt) return;
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        if (outcome === 'accepted') setPwaInstalled(true);
+                        setDeferredPrompt(null);
+                      }}
+                      className="flex items-center gap-1 px-3 py-2 rounded-full bg-green-600 hover:bg-green-700 text-white text-xs font-bold"
+                      title="Instalar app no dispositivo"
+                    >
+                      📲 Instalar App
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

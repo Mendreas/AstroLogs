@@ -1,0 +1,53 @@
+appId: com.mendreas.astrologs
+productName: AstroLogs
+copyright: "Paulo Leal"
+
+# Ficheiros a incluir no executável
+files:
+  - build/**/*
+  - electron/**/*
+  - "!node_modules/**/*"
+
+directories:
+  buildResources: public
+  output: dist
+
+# Windows — cria instalador .exe
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: public/logo512.png
+  requestedExecutionLevel: asInvoker
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: AstroLogs
+  installerHeader: public/logo512.png
+  installerHeaderbmp: public/logo512.png
+  language: "2070"  # Português (Portugal)
+
+# Mac — cria .dmg
+mac:
+  target:
+    - dmg
+  icon: public/logo512.png
+  category: public.app-category.education
+
+dmg:
+  title: "AstroLogs"
+  background: null
+  window:
+    width: 540
+    height: 380
+
+# Linux — AppImage (opcional)
+linux:
+  target:
+    - AppImage
+  icon: public/logo512.png
+  category: Education
