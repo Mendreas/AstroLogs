@@ -18,7 +18,7 @@ function createWindow() {
     icon: path.join(__dirname, '..', 'public', 'logo512.png'),
     title: 'AstroLogs',
     backgroundColor: '#0a0a1a',
-    show: false, // Show after ready-to-show for smooth startup
+    show: false,
   });
 
   // Load the built React app
@@ -34,9 +34,27 @@ function createWindow() {
     mainWindow.show();
   });
 
-  // Open external links in the default browser, not in Electron
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+  // Gerir abertura de novas janelas
+  mainWindow.webContents.setWindowOpenHandler(({ url: winUrl }) => {
+    // Janelas em branco (usadas para mostrar imagens das observações)
+    if (!winUrl || winUrl === 'about:blank') {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 1000,
+          height: 800,
+          backgroundColor: '#000000',
+          title: 'AstroLogs - Imagem',
+          autoHideMenuBar: true,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+          },
+        },
+      };
+    }
+    // Links externos (SIMBAD, Wikipedia, etc.) — abrir no browser
+    shell.openExternal(winUrl);
     return { action: 'deny' };
   });
 
