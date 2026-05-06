@@ -28,8 +28,7 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: AstroLogs
   installerHeader: public/logo512.png
-  installerHeaderbmp: public/logo512.png
-  language: "2070"  # Português (Portugal)
+  language: "2070"
 
 # Mac — cria .dmg
 mac:
