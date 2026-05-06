@@ -26,6 +26,7 @@ jobs:
         run: npm run electron:build:win
         env:
           PUBLIC_URL: ./
+          CI: false
 
       - name: Guardar instalador Windows
         uses: actions/upload-artifact@v4
@@ -51,6 +52,7 @@ jobs:
         run: npm run electron:build:mac
         env:
           PUBLIC_URL: ./
+          CI: false
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Guardar instalador Mac
