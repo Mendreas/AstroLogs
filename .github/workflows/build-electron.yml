@@ -55,6 +55,21 @@ jobs:
           CI: false
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      - name: Assinar app (ad-hoc) para evitar erro "damaged"
+        run: |
+          APP=$(find dist -name "*.app" -type d | head -1)
+          codesign --force --deep --sign - "$APP"
+          echo "App assinada: $APP"
+
+      - name: Recriar DMG com app assinada
+        run: |
+          APP=$(find dist -name "*.app" -type d | head -1)
+          APP_NAME=$(basename "$APP" .app)
+          DMG="dist/${APP_NAME}.dmg"
+          rm -f dist/*.dmg
+          hdiutil create -volname "$APP_NAME" -srcfolder "$APP" -ov -format UDZO "$DMG"
+          echo "DMG criado: $DMG"
+
       - name: Guardar instalador Mac
         uses: actions/upload-artifact@v4
         with:
