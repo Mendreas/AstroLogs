@@ -1,0 +1,62 @@
+name: Build Electron Installers
+
+on:
+  workflow_dispatch:   # botão manual no GitHub
+  push:
+    tags:
+      - 'v*'          # ou quando criares uma tag tipo v1.0.0
+
+jobs:
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build Windows (.exe)
+        run: npm run electron:build:win
+        env:
+          PUBLIC_URL: ./
+
+      - name: Guardar instalador Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: AstroLogs-Windows
+          path: dist/*.exe
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build Mac (.dmg)
+        run: npm run electron:build:mac
+        env:
+          PUBLIC_URL: ./
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Guardar instalador Mac
+        uses: actions/upload-artifact@v4
+        with:
+          name: AstroLogs-Mac
+          path: dist/*.dmg
