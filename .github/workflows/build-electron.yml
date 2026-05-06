@@ -1,10 +1,10 @@
 name: Build Electron Installers
 
 on:
-  workflow_dispatch:   # botão manual no GitHub
+  workflow_dispatch:
   push:
     tags:
-      - 'v*'          # ou quando criares uma tag tipo v1.0.0
+      - 'v*'
 
 jobs:
 
@@ -20,7 +20,7 @@ jobs:
           node-version: '18'
 
       - name: Instalar dependências
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Windows (.exe)
         run: npm run electron:build:win
@@ -45,7 +45,7 @@ jobs:
           node-version: '18'
 
       - name: Instalar dependências
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build Mac (.dmg)
         run: npm run electron:build:mac
