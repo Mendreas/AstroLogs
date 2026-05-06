@@ -2,6 +2,7 @@
   "name": "astro-observation-app",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "homepage": "https://mendreas.github.io/AstroLogs",
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -33,7 +34,9 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "electron:build:win": "cross-env PUBLIC_URL=./ react-scripts build && electron-builder --win",
+    "electron:build:mac": "cross-env PUBLIC_URL=./ react-scripts build && electron-builder --mac"
   },
   "eslintConfig": {
     "extends": [
@@ -56,6 +59,9 @@
   "devDependencies": {
     "@types/react-datepicker": "^6.2.0",
     "autoprefixer": "^10.4.21",
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3",
     "postcss": "^8.5.4",
     "tailwindcss": "^3.4.3"
   }
