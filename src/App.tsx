@@ -280,6 +280,7 @@ const AstroObservationApp = () => {
   const [visibleObjectsNow, setVisibleObjectsNow] = useState<VisibleObject[]>([]);
   const [events, setEvents] = useState<EventType[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [isLookingUp, setIsLookingUp] = useState(false);
   const [isIphone, setIsIphone] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -631,6 +632,81 @@ const AstroObservationApp = () => {
     }
   };
 
+const lookupObjectData = async () => {
+    const name = formData.name.trim();
+    if (!name) { showNotification('Please enter an object name first'); return; }
+    setIsLookingUp(true);
+    try {
+      // Wikipedia — descrição
+      const wikiRes = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`
+      );
+      const wiki = wikiRes.ok ? await wikiRes.json() : null;
+      const description = wiki?.extract
+        ? wiki.extract.split('. ').slice(0, 3).join('. ') + '.'
+        : '';
+      const wikiImage = wiki?.thumbnail?.source || '';
+
+      // SIMBAD — RA, DEC, Magnitude, Distância
+      const query = `SELECT b.ra,b.dec,allfluxes.V,b.plx_value FROM basic b JOIN ident i ON i.oidref=b.oid LEFT JOIN allfluxes ON allfluxes.oidref=b.oid WHERE i.id='${name}' LIMIT 1`;
+      const simbadUrl = `https://simbad.cds.unistra.fr/simbad/sim-tap/sync?REQUEST=doQuery&LANG=ADQL&FORMAT=json&QUERY=${encodeURIComponent(query)}`;
+      const simbadRes = await fetch(simbadUrl);
+      const simbad = simbadRes.ok ? await simbadRes.json() : null;
+
+      let ra = '', dec = '', magnitude = '', distance = '', distanceUnit = 'ly';
+      if (simbad?.data?.[0]) {
+        const [raVal, decVal, vMag, plx] = simbad.data[0];
+        if (raVal !== null) {
+          const h = Math.floor(raVal / 15);
+          const m = Math.floor((raVal / 15 - h) * 60);
+          const s = ((raVal / 15 - h) * 60 - m) * 60;
+          ra = `${h.toString().padStart(2,'0')}h${m.toString().padStart(2,'0')}m${s.toFixed(1).padStart(4,'0')}s`;
+        }
+        if (decVal !== null) {
+          const sign = decVal < 0 ? '-' : '+';
+          const absDec = Math.abs(decVal);
+          const d = Math.floor(absDec);
+          const dm = Math.floor((absDec - d) * 60);
+          const ds = ((absDec - d) * 60 - dm) * 60;
+          dec = `${sign}${d.toString().padStart(2,'0')}°${dm.toString().padStart(2,'0')}'${ds.toFixed(0).padStart(2,'0')}"`;
+        }
+        if (vMag !== null) magnitude = vMag.toFixed(1);
+        if (plx && plx > 0) {
+          const distPc = 1000 / plx;
+          const distLy = distPc * 3.26156;
+          if (distLy < 1000000) {
+            distance = distLy.toFixed(0);
+            distanceUnit = 'ly';
+          } else {
+            distance = (distLy / 1000000).toFixed(1);
+            distanceUnit = 'Mly';
+          }
+        }
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        ra: ra || prev.ra,
+        dec: dec || prev.dec,
+        magnitude: magnitude || prev.magnitude,
+        distance: distance || prev.distance,
+        distanceUnit: distance ? distanceUnit : prev.distanceUnit,
+        description: description || prev.description,
+        image: wikiImage || prev.image,
+      }));
+
+      if (!ra && !description) {
+        showNotification('Not found. Try official name e.g. "M 42", "NGC 224", "Sirius"');
+      } else {
+        showNotification('✅ Data loaded! Review and adjust as needed.');
+      }
+    } catch (e) {
+      showNotification('Could not fetch data. Check your connection.');
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
+  
   const handleImageClick = (img: string) => {
     const win = window.open("", "_blank");
     if (win) {
@@ -1694,14 +1770,16 @@ const AstroObservationApp = () => {
                 <button onClick={() => { setShowAddForm(false); setEditObservationId(null); }} className="text-gray-400 hover:text-white"><X size={24} /></button>
               </div>
               <form onSubmit={handleAddObservation} className="space-y-4">
-                {/* Name */}
+{/* Name */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Object Name *</label>
-                  <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. M42, Sirius, Saturn" className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input" required />
+                  <div className="flex gap-2">
+                    <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. M42, Sirius, Saturn" className="flex-1 p-2 bg-gray-700 rounded border border-gray-600 ios-input" required />
+                    <button type="button" onClick={lookupObjectData} disabled={isLookingUp} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded text-sm whitespace-nowrap">
+                      {isLookingUp ? '⏳' : '🔍 Auto-fill'}
+                    </button>
+                  </div>
                 </div>
-                {/* Type + Date */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
                     <label className="block text-sm font-medium mb-1">Type</label>
                     <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input">
                       <option value="star">Star</option>
