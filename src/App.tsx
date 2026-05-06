@@ -631,13 +631,13 @@ const AstroObservationApp = () => {
       showNotification('Error processing image. Please try another file.');
     }
   };
-
+  
 const lookupObjectData = async () => {
     const name = formData.name.trim();
     if (!name) { showNotification('Please enter an object name first'); return; }
     setIsLookingUp(true);
     try {
-      // Wikipedia — descrição
+      // Wikipedia — descrição e imagem
       const wikiRes = await fetch(
         `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`
       );
@@ -647,41 +647,43 @@ const lookupObjectData = async () => {
         : '';
       const wikiImage = wiki?.thumbnail?.source || '';
 
-      // SIMBAD — RA, DEC, Magnitude, Distância
-      const query = `SELECT b.ra,b.dec,allfluxes.V,b.plx_value FROM basic b JOIN ident i ON i.oidref=b.oid LEFT JOIN allfluxes ON allfluxes.oidref=b.oid WHERE i.id='${name}' LIMIT 1`;
-      const simbadUrl = `https://simbad.cds.unistra.fr/simbad/sim-tap/sync?REQUEST=doQuery&LANG=ADQL&FORMAT=json&QUERY=${encodeURIComponent(query)}`;
-      const simbadRes = await fetch(simbadUrl);
-      const simbad = simbadRes.ok ? await simbadRes.json() : null;
+      // SIMBAD — coordenadas e paralaxe
+      const q1 = `SELECT b.ra,b.dec,b.plx_value FROM basic b JOIN ident i ON i.oidref=b.oid WHERE i.id='${name}' LIMIT 1`;
+      const r1 = await fetch(`https://simbad.cds.unistra.fr/simbad/sim-tap/sync?REQUEST=doQuery&LANG=ADQL&FORMAT=json&QUERY=${encodeURIComponent(q1)}`);
+      const d1 = r1.ok ? await r1.json() : null;
+
+      // SIMBAD — magnitude V
+      const q2 = `SELECT f.flux FROM flux f JOIN ident i ON i.oidref=f.oidref WHERE i.id='${name}' AND f.filter='V' LIMIT 1`;
+      const r2 = await fetch(`https://simbad.cds.unistra.fr/simbad/sim-tap/sync?REQUEST=doQuery&LANG=ADQL&FORMAT=json&QUERY=${encodeURIComponent(q2)}`);
+      const d2 = r2.ok ? await r2.json() : null;
 
       let ra = '', dec = '', magnitude = '', distance = '', distanceUnit = 'ly';
-      if (simbad?.data?.[0]) {
-        const [raVal, decVal, vMag, plx] = simbad.data[0];
-        if (raVal !== null) {
+
+      if (d1?.data?.[0]) {
+        const [raVal, decVal, plx] = d1.data[0];
+        if (raVal != null) {
           const h = Math.floor(raVal / 15);
           const m = Math.floor((raVal / 15 - h) * 60);
           const s = ((raVal / 15 - h) * 60 - m) * 60;
           ra = `${h.toString().padStart(2,'0')}h${m.toString().padStart(2,'0')}m${s.toFixed(1).padStart(4,'0')}s`;
         }
-        if (decVal !== null) {
+        if (decVal != null) {
           const sign = decVal < 0 ? '-' : '+';
-          const absDec = Math.abs(decVal);
-          const d = Math.floor(absDec);
-          const dm = Math.floor((absDec - d) * 60);
-          const ds = ((absDec - d) * 60 - dm) * 60;
+          const abs = Math.abs(decVal);
+          const d = Math.floor(abs);
+          const dm = Math.floor((abs - d) * 60);
+          const ds = ((abs - d) * 60 - dm) * 60;
           dec = `${sign}${d.toString().padStart(2,'0')}°${dm.toString().padStart(2,'0')}'${ds.toFixed(0).padStart(2,'0')}"`;
         }
-        if (vMag !== null) magnitude = vMag.toFixed(1);
-        if (plx && plx > 0) {
-          const distPc = 1000 / plx;
-          const distLy = distPc * 3.26156;
-          if (distLy < 1000000) {
-            distance = distLy.toFixed(0);
-            distanceUnit = 'ly';
-          } else {
-            distance = (distLy / 1000000).toFixed(1);
-            distanceUnit = 'Mly';
-          }
+        if (plx != null && plx > 0) {
+          const distLy = (1000 / plx) * 3.26156;
+          if (distLy < 1000000) { distance = distLy.toFixed(0); distanceUnit = 'ly'; }
+          else { distance = (distLy / 1000000).toFixed(1); distanceUnit = 'Mly'; }
         }
+      }
+
+      if (d2?.data?.[0]?.[0] != null) {
+        magnitude = Number(d2.data[0][0]).toFixed(1);
       }
 
       setFormData(prev => ({
@@ -696,7 +698,7 @@ const lookupObjectData = async () => {
       }));
 
       if (!ra && !description) {
-        showNotification('Not found. Try official name e.g. "M 42", "NGC 224", "Sirius"');
+        showNotification('Not found. Try: "M 42", "NGC 224", "Sirius", "Betelgeuse"');
       } else {
         showNotification('✅ Data loaded! Review and adjust as needed.');
       }
@@ -706,6 +708,7 @@ const lookupObjectData = async () => {
       setIsLookingUp(false);
     }
   };
+
   
   const handleImageClick = (img: string) => {
     const win = window.open("", "_blank");
