@@ -2,6 +2,10 @@ appId: com.mendreas.astrologs
 productName: AstroLogs
 copyright: "Paulo Leal"
 
+# Indica onde está o ficheiro principal do Electron
+extraMetadata:
+  main: electron/main.js
+
 # Ficheiros a incluir no executável
 files:
   - build/**/*
