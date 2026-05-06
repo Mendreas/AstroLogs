@@ -1780,6 +1780,9 @@ const lookupObjectData = async () => {
                     </button>
                   </div>
                 </div>
+                {/* Type + Date */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <label className="block text-sm font-medium mb-1">Type</label>
                     <select value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full p-2 bg-gray-700 rounded border border-gray-600 ios-input">
                       <option value="star">Star</option>
