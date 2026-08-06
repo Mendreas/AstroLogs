@@ -1,0 +1,40 @@
+name: Deploy AstroLogs to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production app
+        run: npm run build
+        env:
+          CI: false
+
+      - name: Publish to gh-pages
+        run: npx gh-pages -d build -u "github-actions-bot <support+actions@github.com>"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
